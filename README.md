@@ -1,5 +1,8 @@
 # Future Internet Fusion (FIFu)
 
+## Tools
+ - ficatresource (Future Internet Cat Resource): Get a resource matching a
+   given URI and write it to stdout.
 
 ## License
 This program is free software: you can redistribute it and/or modify
