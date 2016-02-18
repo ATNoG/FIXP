@@ -1,0 +1,14 @@
+image: debian:jessie
+
+before_script:
+  - ./install_requirements.sh
+
+stages:
+  - build
+
+build_check:
+ stage: build
+ script:
+   - ./build.sh
+ tags:
+   - docker
