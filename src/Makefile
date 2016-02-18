@@ -14,11 +14,11 @@
 ##  You should have received a copy of the GNU General Public License
 ##  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-TARGET=fixp
+EXEC=fixp
 SRC_DIR=.
 INCLUDE_DIR=../include
 BUILD_DIR=../dist
-SUBDIRS = $(wildcard */.)
+PLUGINS_DIR=protocols converters
 
 CC=gcc
 CXX=g++
@@ -31,29 +31,26 @@ LDLIBS=-ldl -lpthread -lboost_program_options -lboost_system -lboost_filesystem
 SOURCES=$(wildcard $(SRC_DIR)/*.cpp)
 OBJS=$(SOURCES:.cpp=.o)
 
-all: $(TARGET)
-	for item in $(SUBDIRS); do \
-		make -C $$item $@; \
-	done
-
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-$(TARGET): $(OBJS) $(BUILD_DIR)
-	$(CXX) $(OBJS) $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$(TARGET) $(LDLIBS)
+$(EXEC): $(OBJS) $(BUILD_DIR)
+	$(CXX) $(OBJS) $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$(EXEC) $(LDLIBS)
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CPPFLAGS) -c $< -o $@
 
+all: $(EXEC)
+	@ set -e ; \
+	$(foreach dir, $(PLUGINS_DIR), make $@ -C $(dir);)
+
 clean:
-	$(RM) -f $(OBJS)
-	for item in $(SUBDIRS); do \
-		make -C $$item $@; \
-	done
+	@ set -e ; \
+	$(foreach dir, $(PLUGINS_DIR), make $@ -C $(dir);)
+	rm -f $(OBJS)
 
 dist-clean:
-	$(RM) -rf $(BUILD_DIR)
-	for item in $(SUBDIRS); do \
-		make -C $$item $@; \
-	done
+	@ set -e ; \
+	$(foreach dir, $(PLUGINS_DIR), make $@ -C $(dir);)
+	rm -rf $(BUILD_DIR)/$(EXEC)
 

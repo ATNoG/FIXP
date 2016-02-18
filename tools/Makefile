@@ -14,20 +14,15 @@
 ##  You should have received a copy of the GNU General Public License
 ##  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+BUILD_DIR=../dist/tools
 SUBDIRS = $(wildcard */.)
 
-all:
-	for item in $(SUBDIRS); do \
-		make -C $$item $@; \
-	done
-
-clean:
-	for item in $(SUBDIRS); do \
-		make -C $$item $@; \
-	done
+all clean:
+	@ set -e ; \
+	$(foreach dir, $(SUBDIRS), make $@ -C $(dir);)
 
 dist-clean:
-	for item in $(SUBDIRS); do \
-		make -C $$item $@; \
-	done
+	@ set -e ; \
+	$(foreach dir, $(SUBDIRS), make $@ -C $(dir);)
+	rm -rf $(BUILD_DIR)
 
