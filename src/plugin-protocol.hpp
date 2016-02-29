@@ -21,6 +21,7 @@
 #include "metamessage.hpp"
 #include "concurrent-blocking-queue.hpp"
 
+#include <atomic>
 #include <map>
 #include <string>
 
@@ -31,12 +32,13 @@ private:
   ConcurrentBlockingQueue<MetaMessage*>& _send_to_core;
 
 protected:
-  bool isRunning = false;
+  std::atomic<bool> isRunning;
   ConcurrentBlockingQueue<MetaMessage*> _msg_to_send;
 
 public:
   PluginProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue)
-    : _send_to_core(queue)
+    : _send_to_core(queue),
+      isRunning(false)
   { };
 
   virtual ~PluginProtocol()

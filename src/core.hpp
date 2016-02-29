@@ -21,13 +21,14 @@
 #include "plugin-manager.hpp"
 #include "concurrent-blocking-queue.hpp"
 
+#include <atomic>
 #include <map>
 #include <string>
 
 class Core
 {
 private:
-  bool isRunning = false;
+  std::atomic<bool> isRunning;
 
   PluginManager pm;
 
@@ -36,6 +37,7 @@ private:
 
 public:
   Core()
+    : isRunning(false)
   { }
 
   ~Core()

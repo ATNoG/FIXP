@@ -18,6 +18,7 @@
 #ifndef CONCURRENT_BLOCKING_QUEUE__HPP_
 #define CONCURRENT_BLOCKING_QUEUE__HPP_
 
+#include <atomic>
 #include <queue>
 #include <mutex>
 #include <condition_variable>
@@ -26,13 +27,17 @@ template<typename T>
 class ConcurrentBlockingQueue
 {
 private:
-  bool _interrupted = false;
+  std::atomic<bool> _interrupted;
 
   std::queue<T> _queue;
   mutable std::mutex _mutex;
   std::condition_variable _notifier;
 
 public:
+  ConcurrentBlockingQueue()
+    : _interrupted(false)
+  { }
+
   ~ConcurrentBlockingQueue()
   { }
 
