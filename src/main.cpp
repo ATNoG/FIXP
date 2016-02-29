@@ -32,11 +32,8 @@ Core* core;
 
 void signalHandler(int signum)
 {
-    // Stop and exit
+    // Stop Core execution
     core->stop();
-    delete core;
-
-    exit(signum);
 }
 
 void loadProtocols(Core& core, std::string path)
@@ -160,6 +157,7 @@ int main(int argc, char* argv[])
 
   core->start();
 
+  delete core;
   return 0;
 }
 

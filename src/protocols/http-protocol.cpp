@@ -21,7 +21,7 @@
 #include <curl/curl.h>
 #include <curl/multi.h>
 
-extern "C" HttpProtocol* create_plugin_object(boost::lockfree::queue<MetaMessage*>& queue)
+extern "C" HttpProtocol* create_plugin_object(ConcurrentBlockingQueue<MetaMessage*>& queue)
 {
   return new HttpProtocol(queue);
 }
@@ -86,24 +86,19 @@ size_t checkConnectionStatus(CURLM*& cm)
     return -1;
   }
 
-  // Calculate timeout
-  struct timeval timeout = { 0, 100 * 1000 }; // Default: 100ms
-  long curl_timeout = -1;
-  curl_multi_timeout(cm, &curl_timeout);
-  if(curl_timeout > 0) {
-    timeout.tv_sec = curl_timeout / 1000;
-    timeout.tv_usec = (curl_timeout % 1000) * 1000;
-  }
-
-  if(select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout) != -1) {
-    curl_multi_perform(cm, &pendingRequests);
-  }
+  // FIXME:
+  struct timeval timeout = { 0, 200 * 1000 }; // Timeout: 200 ms
+  do {
+    if(select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout) != -1) {
+      curl_multi_perform(cm, &pendingRequests);
+    }
+  } while(pendingRequests != 0);
 
   return pendingRequests;
 }
 ///////////////////////////////////////////////////////////////////////////////
 
-HttpProtocol::HttpProtocol(boost::lockfree::queue<MetaMessage*>& queue)
+HttpProtocol::HttpProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue)
     : PluginProtocol(queue)
 { }
 
@@ -113,6 +108,7 @@ HttpProtocol::~HttpProtocol()
 void HttpProtocol::stop()
 {
   isRunning = false;
+  _msg_to_send.stop();
 
   _msg_receiver.join();
   _msg_sender.join();
@@ -156,26 +152,30 @@ void HttpProtocol::startSender()
 
   MetaMessage* msg;
   while(isRunning) {
-    if(_msg_to_send.pop(msg)) {
-      BOOST_LOG_TRIVIAL(trace) << "[HTTP Protocol Plugin]"  << std::endl
-                               << " - Processing next message in the queue ("
-                               << msg->_uri << ")" << std::endl;
-
-      MetaMessage* out = new MetaMessage();
-      out->_uri = msg->_uri;
-
-      // Create new connection to send incoming message
-      CURL* connection = newConnection(msg->_uri, out->_contentPayload);
-      connections.emplace(connection, out);
-      curl_multi_add_handle(cm, connection);
-
-      // Perform HTTP request
-      int tmp = -1;
-      curl_multi_perform(cm, &tmp);
-
-      // Release the kraken
-      delete msg;
+    try {
+      msg = _msg_to_send.pop();
+    } catch(...) {
+      return;
     }
+
+    BOOST_LOG_TRIVIAL(trace) << "[HTTP Protocol Plugin]"  << std::endl
+                             << " - Processing next message in the queue ("
+                             << msg->_uri << ")" << std::endl;
+
+    MetaMessage* out = new MetaMessage();
+    out->_uri = msg->_uri;
+
+    // Create new connection to send incoming message
+    CURL* connection = newConnection(msg->_uri, out->_contentPayload);
+    connections.emplace(connection, out);
+    curl_multi_add_handle(cm, connection);
+
+    // Perform HTTP request
+    int tmp = -1;
+    curl_multi_perform(cm, &tmp);
+
+    // Release the kraken
+    delete msg;
 
     // Process responses to pending requests
     // FIXME: handle errors

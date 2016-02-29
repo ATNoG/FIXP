@@ -20,7 +20,7 @@
 #include <boost/log/trivial.hpp>
 #include <cryptopp/sha.h>
 
-extern "C" PursuitProtocol* create_plugin_object(boost::lockfree::queue<MetaMessage*>& queue)
+extern "C" PursuitProtocol* create_plugin_object(ConcurrentBlockingQueue<MetaMessage*>& queue)
 {
   return new PursuitProtocol(queue);
 }
@@ -48,7 +48,7 @@ std::string createForeignUri(std::string o_uri)
 }
 ///////////////////////////////////////////////////////////////////////////////
 
-PursuitProtocol::PursuitProtocol(boost::lockfree::queue<MetaMessage*>& queue)
+PursuitProtocol::PursuitProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue)
     : PluginProtocol(queue)
 {
   // Blackadder running in user space
@@ -73,6 +73,7 @@ void PursuitProtocol::start()
 void PursuitProtocol::stop()
 {
   isRunning = false;
+  _msg_to_send.stop();
 
   _msg_receiver.detach();
   _msg_sender.join();
@@ -124,26 +125,29 @@ void PursuitProtocol::startSender()
   MetaMessage* msg;
 
   while(isRunning) {
-    while(_msg_to_send.pop(msg)) {
-      BOOST_LOG_TRIVIAL(trace) << "[PURSUIT Protocol Plugin]" << std::endl
-                               << "Processing next message in the queue ("
-                               << msg->_uri << ")" << std::endl;
-
-      //FIXME: Launch thread to handle send operation
-      BOOST_LOG_TRIVIAL(trace) << "[PURSUIT Protocol Plugin]" << std::endl
-                               << " - Starting publishing item ("
-                               << msg->_uri << ")" << std::endl;
-      ba->publish_data(hex_to_chararray(msg->_uri.substr(std::string(SCHEMA).size(),
-                                                         std::string::npos)),
-                                        DOMAIN_LOCAL,
-                                        NULL,
-                                        0,
-                                        (void*) msg->_contentPayload.c_str(),
-                                        msg->_contentPayload.size());
-
-      // Release the kraken
-      delete msg;
+    try {
+      msg = _msg_to_send.pop();
+    } catch(...) {
+      return;
     }
+
+    BOOST_LOG_TRIVIAL(trace) << "[PURSUIT Protocol Plugin]" << std::endl
+                             << "Processing next message in the queue ("
+                             << msg->_uri << ")" << std::endl;
+
+    BOOST_LOG_TRIVIAL(trace) << "[PURSUIT Protocol Plugin]" << std::endl
+                             << " - Starting publishing item ("
+                             << msg->_uri << ")" << std::endl;
+    ba->publish_data(hex_to_chararray(msg->_uri.substr(std::string(SCHEMA).size(),
+                                                       std::string::npos)),
+                                      DOMAIN_LOCAL,
+                                      NULL,
+                                      0,
+                                      (void*) msg->_contentPayload.c_str(),
+                                      msg->_contentPayload.size());
+
+    // Release the kraken
+    delete msg;
   }
 }
 

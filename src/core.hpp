@@ -19,10 +19,10 @@
 #define CORE__HPP_
 
 #include "plugin-manager.hpp"
+#include "concurrent-blocking-queue.hpp"
 
 #include <map>
 #include <string>
-#include <boost/lockfree/queue.hpp>
 
 class Core
 {
@@ -32,17 +32,14 @@ private:
   PluginManager pm;
 
   std::map<std::string, std::string> _mappings;
-  boost::lockfree::queue<MetaMessage*> _queue;
+  ConcurrentBlockingQueue<MetaMessage*> _queue;
 
 public:
   Core()
-    : _queue(0)
   { }
 
   ~Core()
-  {
-    stop();
-  }
+  { }
 
   void start();
   void stop();

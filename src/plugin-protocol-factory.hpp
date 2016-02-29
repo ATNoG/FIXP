@@ -19,19 +19,19 @@
 #define PLUGIN_PROTOCOL_FACTORY__HPP_
 
 #include "plugin-protocol.hpp"
+#include "concurrent-blocking-queue.hpp"
 
 #include <dlfcn.h>
 #include <boost/shared_ptr.hpp>
-#include <boost/lockfree/queue.hpp>
 
 class PluginProtocolFactory {
 public:
-  static boost::shared_ptr<PluginProtocol> createPlugin(std::string path, boost::lockfree::queue<MetaMessage*>& queue)
+  static boost::shared_ptr<PluginProtocol> createPlugin(std::string path, ConcurrentBlockingQueue<MetaMessage*>& queue)
   {
     void* handle = dlopen(path.c_str(), RTLD_LAZY);
 
-    PluginProtocol* (*create)(boost::lockfree::queue<MetaMessage*>&)
-      = (PluginProtocol* (*)(boost::lockfree::queue<MetaMessage*>&)) dlsym(handle, "create_plugin_object");
+    PluginProtocol* (*create)(ConcurrentBlockingQueue<MetaMessage*>&)
+      = (PluginProtocol* (*)(ConcurrentBlockingQueue<MetaMessage*>&)) dlsym(handle, "create_plugin_object");
     PluginProtocol* plugin = create(queue);
 
     return boost::shared_ptr<PluginProtocol>(plugin);

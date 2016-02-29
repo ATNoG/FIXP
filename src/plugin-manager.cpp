@@ -30,9 +30,16 @@ std::string extractSchema(std::string uri)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void PluginManager::stop()
+{
+  // Stop protocol plugins
+  for(auto item : _protocols) {
+    item.second->stop();
+  }
+}
 
 void PluginManager::loadProtocol(std::string path,
-                                 boost::lockfree::queue<MetaMessage*>& queue)
+                                 ConcurrentBlockingQueue<MetaMessage*>& queue)
 {
   boost::filesystem::path file(path);
   if(!boost::filesystem::exists(file) ||

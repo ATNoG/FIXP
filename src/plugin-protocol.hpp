@@ -19,23 +19,24 @@
 #define PLUGIN_PROTOCOL__HPP_
 
 #include "metamessage.hpp"
+#include "concurrent-blocking-queue.hpp"
 
 #include <map>
 #include <string>
-#include <boost/lockfree/queue.hpp>
+
 
 class PluginProtocol
 {
 private:
-  boost::lockfree::queue<MetaMessage*>& _send_to_core;
+  ConcurrentBlockingQueue<MetaMessage*>& _send_to_core;
 
 protected:
   bool isRunning = false;
-  boost::lockfree::queue<MetaMessage*> _msg_to_send;
+  ConcurrentBlockingQueue<MetaMessage*> _msg_to_send;
 
 public:
-  PluginProtocol(boost::lockfree::queue<MetaMessage*>& queue)
-    : _send_to_core(queue), _msg_to_send(0)
+  PluginProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue)
+    : _send_to_core(queue)
   { };
 
   virtual ~PluginProtocol()

@@ -20,12 +20,12 @@
 
 #include "plugin-protocol.hpp"
 #include "plugin-converter.hpp"
+#include "concurrent-blocking-queue.hpp"
 
 #include <map>
 #include <thread>
 #include <vector>
 #include <boost/shared_ptr.hpp>
-#include <boost/lockfree/queue.hpp>
 
 class PluginManager
 {
@@ -39,9 +39,8 @@ public:
 
   ~PluginManager()
   {
-    // Stop and delete protocol plugins
+    // Delete protocol plugins
     for(auto item : _protocols) {
-      item.second->stop();
       delete item.second.get();
     }
 
@@ -55,8 +54,9 @@ public:
     _converters.clear();
   }
 
+  void stop();
   void loadProtocol(std::string path,
-                    boost::lockfree::queue<MetaMessage*>&queue);
+                    ConcurrentBlockingQueue<MetaMessage*>& queue);
   void loadConverter(std::string path);
 
   std::vector<std::string> installMapping(std::string uri);

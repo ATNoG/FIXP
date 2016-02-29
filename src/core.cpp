@@ -48,6 +48,8 @@ void Core::createMapping(std::string uri)
 void Core::stop()
 {
   isRunning = false;
+  pm.stop();
+  _queue.stop();
 }
 
 void Core::start()
@@ -56,46 +58,51 @@ void Core::start()
 
   MetaMessage* in;
   while(isRunning) {
-    while(_queue.pop(in)) {
-      BOOST_LOG_TRIVIAL(trace) << "[FIXP (Core)]" << std::endl
-                               << " - Processing next message in the queue ("
-                               << in->_uri << ")" << std::endl;
-
-      //FIXME: Launch thread to handle send operation
-      MetaMessage* out = new MetaMessage();
-      std::map<std::string, std::string>::iterator it;
-      if((it = _mappings.find(in->_uri)) != _mappings.end()) {
-        out->_uri = it->second;
-      } else {
-        BOOST_LOG_TRIVIAL(warning) << "[FIXP (Core)]" << std::endl
-                                   << " - Mapping for " << in->_uri
-                                   << " not found" << std::endl;
-        continue;
-      }
-
-      // Extract existent URIs and create mappings to other architectures
-      std::vector<std::string> uris;
-      uris = pm.getConverterPlugin(in->_uri, out->_uri)->extractUrisFrom(*in);
-
-      for(auto item : uris) {
-        // Use absolute URIs
-        std::string o_uri = item;
-        if(item.find("://") == std::string::npos) {
-          o_uri = pm.getConverterPlugin(in->_uri, out->_uri)->uriToAbsoluteForm(item, in->_uri);
-        }
-
-        createMapping(o_uri);
-      }
-
-      // Adapt URIs in the content to cope with the destination architecture
-      out->_contentPayload = pm.getConverterPlugin(in->_uri, out->_uri)->convertContent(*in, uris, _mappings);
-
-      // Send message to destination network architecture
-      pm.getProtocolPlugin(out->_uri.substr(0, out->_uri.find("://")))->sendMessage(out);
-
-      // Release the kraken
-      delete in;
+    // Process next message
+    try {
+      in = _queue.pop();
+    } catch(...) {
+      return;
     }
+
+    BOOST_LOG_TRIVIAL(trace) << "[FIXP (Core)]" << std::endl
+                             << " - Processing next message in the queue ("
+                             << in->_uri << ")" << std::endl;
+
+    //FIXME: Launch thread to handle send operation
+    MetaMessage* out = new MetaMessage();
+    std::map<std::string, std::string>::iterator it;
+    if((it = _mappings.find(in->_uri)) != _mappings.end()) {
+      out->_uri = it->second;
+    } else {
+      BOOST_LOG_TRIVIAL(warning) << "[FIXP (Core)]" << std::endl
+                                 << " - Mapping for " << in->_uri
+                                 << " not found" << std::endl;
+      continue;
+    }
+
+    // Extract existent URIs and create mappings to other architectures
+    std::vector<std::string> uris;
+    uris = pm.getConverterPlugin(in->_uri, out->_uri)->extractUrisFrom(*in);
+
+    for(auto item : uris) {
+      // Use absolute URIs
+      std::string o_uri = item;
+      if(item.find("://") == std::string::npos) {
+        o_uri = pm.getConverterPlugin(in->_uri, out->_uri)->uriToAbsoluteForm(item, in->_uri);
+      }
+
+     createMapping(o_uri);
+    }
+
+    // Adapt URIs in the content to cope with the destination architecture
+    out->_contentPayload = pm.getConverterPlugin(in->_uri, out->_uri)->convertContent(*in, uris, _mappings);
+
+    // Send message to destination network architecture
+    pm.getProtocolPlugin(out->_uri.substr(0, out->_uri.find("://")))->sendMessage(out);
+
+    // Release the kraken
+    delete in;
   }
 }
 

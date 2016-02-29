@@ -31,7 +31,7 @@ private:
   std::thread _msg_sender;
 
 public:
-  HttpProtocol(boost::lockfree::queue<MetaMessage*>& queue);
+  HttpProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue);
   ~HttpProtocol();
 
   void start();

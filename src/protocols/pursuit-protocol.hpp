@@ -19,10 +19,10 @@
 #define FP7_PURSUIT_PROTOCOL__HPP_
 
 #include "../plugin-protocol.hpp"
+#include "concurrent-blocking-queue.hpp"
 
 #include <thread>
 #include <blackadder.hpp>
-#include <boost/lockfree/queue.hpp>
 
 #define SCHEMA "pursuit://"
 #define PURSUIT_ID_LEN_HEX_FORMAT 2 * PURSUIT_ID_LEN
@@ -36,7 +36,7 @@ private:
   std::thread _msg_sender;
 
 public:
-  PursuitProtocol(boost::lockfree::queue<MetaMessage*>& queue);
+  PursuitProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue);
   ~PursuitProtocol();
 
   void start();
