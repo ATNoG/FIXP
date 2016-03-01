@@ -16,6 +16,7 @@
  */
 
 #include "core.hpp"
+#include "thread-pool.hpp"
 
 #include <fstream>
 #include <signal.h>
@@ -108,6 +109,7 @@ int main(int argc, char* argv[])
   std::string path_to_protocols;
   std::string path_to_converters;
   unsigned short verbosity;
+  int numWorkers;
 
   boost::program_options::options_description desc("Options");
   boost::program_options::variables_map vm;
@@ -119,6 +121,8 @@ int main(int argc, char* argv[])
                 "Path to protocol endpoint plugins")
       ("converters,c", boost::program_options::value<std::string>(&path_to_converters)->required(),
                 "Path to protocol convertion plugins")
+      ("workers,w", boost::program_options::value<int>(&numWorkers)->default_value(-1),
+                "Number of conversions that can be handle simultaneously")
       ("verbose,v", boost::program_options::value<unsigned short>(&verbosity)->default_value(4),
                 "Produce verbose output (up to 6 levels)")
       ("help,h", "Display configuration options");
@@ -146,6 +150,7 @@ int main(int argc, char* argv[])
 
   load_logger(verbosity);
 
+  ThreadPool tp(numWorkers);
   core = new Core();
 
   // Load plugins
