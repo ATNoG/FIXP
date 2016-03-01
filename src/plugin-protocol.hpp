@@ -20,11 +20,11 @@
 
 #include "metamessage.hpp"
 #include "concurrent-blocking-queue.hpp"
+#include "thread-pool.hpp"
 
 #include <atomic>
 #include <map>
 #include <string>
-
 
 class PluginProtocol
 {
@@ -34,10 +34,13 @@ private:
 protected:
   std::atomic<bool> isRunning;
   ConcurrentBlockingQueue<MetaMessage*> _msg_to_send;
+  ThreadPool& _tp;
 
 public:
-  PluginProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue)
+  PluginProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
+                 ThreadPool& tp)
     : _send_to_core(queue),
+      _tp(tp),
       isRunning(false)
   { };
 
@@ -59,6 +62,9 @@ public:
   {
     _msg_to_send.push(msg);
   }
+
+protected:
+  virtual void processMessage(MetaMessage* msg) = 0;
 };
 
 #endif /* PLUGIN_PROTOCOL__HPP_ */

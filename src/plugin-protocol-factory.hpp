@@ -26,13 +26,16 @@
 
 class PluginProtocolFactory {
 public:
-  static boost::shared_ptr<PluginProtocol> createPlugin(std::string path, ConcurrentBlockingQueue<MetaMessage*>& queue)
+  static boost::shared_ptr<PluginProtocol> createPlugin(std::string path,
+                                                        ConcurrentBlockingQueue<MetaMessage*>& queue,
+                                                        ThreadPool& tp)
   {
     void* handle = dlopen(path.c_str(), RTLD_LAZY);
-
-    PluginProtocol* (*create)(ConcurrentBlockingQueue<MetaMessage*>&)
-      = (PluginProtocol* (*)(ConcurrentBlockingQueue<MetaMessage*>&)) dlsym(handle, "create_plugin_object");
-    PluginProtocol* plugin = create(queue);
+    PluginProtocol* (*create)(ConcurrentBlockingQueue<MetaMessage*>&,
+                              ThreadPool&)
+      = (PluginProtocol* (*)(ConcurrentBlockingQueue<MetaMessage*>&,
+                             ThreadPool&)) dlsym(handle, "create_plugin_object");
+    PluginProtocol* plugin = create(queue, tp);
 
     return boost::shared_ptr<PluginProtocol>(plugin);
   }

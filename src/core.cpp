@@ -21,7 +21,7 @@
 
 void Core::loadProtocol(std::string path)
 {
-  pm.loadProtocol(path, _queue);
+  pm.loadProtocol(path, _queue, _tp);
 }
 
 void Core::loadConverter(std::string path)
@@ -69,40 +69,45 @@ void Core::start()
                              << " - Processing next message in the queue ("
                              << in->_uri << ")" << std::endl;
 
-    //FIXME: Launch thread to handle send operation
+    // Schedule message processing
+    std::function<void()> func(std::bind(&Core::processMessage, this, in));
+    _tp.schedule(std::move(func));
+  }
+}
+
+void Core::processMessage(MetaMessage* msg)
+{
     MetaMessage* out = new MetaMessage();
     std::map<std::string, std::string>::iterator it;
-    if((it = _mappings.find(in->_uri)) != _mappings.end()) {
+    if((it = _mappings.find(msg->_uri)) != _mappings.end()) {
       out->_uri = it->second;
     } else {
       BOOST_LOG_TRIVIAL(warning) << "[FIXP (Core)]" << std::endl
-                                 << " - Mapping for " << in->_uri
+                                 << " - Mapping for " << msg->_uri
                                  << " not found" << std::endl;
-      continue;
+      return;
     }
 
     // Extract existent URIs and create mappings to other architectures
     std::vector<std::string> uris;
-    uris = pm.getConverterPlugin(in->_uri, out->_uri)->extractUrisFrom(*in);
+    uris = pm.getConverterPlugin(msg->_uri, out->_uri)->extractUrisFrom(*msg);
 
     for(auto item : uris) {
       // Use absolute URIs
       std::string o_uri = item;
       if(item.find("://") == std::string::npos) {
-        o_uri = pm.getConverterPlugin(in->_uri, out->_uri)->uriToAbsoluteForm(item, in->_uri);
+        o_uri = pm.getConverterPlugin(msg->_uri, out->_uri)->uriToAbsoluteForm(item, msg->_uri);
       }
 
      createMapping(o_uri);
     }
 
     // Adapt URIs in the content to cope with the destination architecture
-    out->_contentPayload = pm.getConverterPlugin(in->_uri, out->_uri)->convertContent(*in, uris, _mappings);
+    out->_contentPayload = pm.getConverterPlugin(msg->_uri, out->_uri)->convertContent(*msg, uris, _mappings);
 
     // Send message to destination network architecture
     pm.getProtocolPlugin(out->_uri.substr(0, out->_uri.find("://")))->sendMessage(out);
 
     // Release the kraken
-    delete in;
-  }
+    delete msg;
 }
-

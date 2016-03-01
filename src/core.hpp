@@ -20,6 +20,7 @@
 
 #include "plugin-manager.hpp"
 #include "concurrent-blocking-queue.hpp"
+#include "thread-pool.hpp"
 
 #include <atomic>
 #include <map>
@@ -31,13 +32,15 @@ private:
   std::atomic<bool> isRunning;
 
   PluginManager pm;
+  ThreadPool& _tp;
 
   std::map<std::string, std::string> _mappings;
   ConcurrentBlockingQueue<MetaMessage*> _queue;
 
 public:
-  Core()
-    : isRunning(false)
+  Core(ThreadPool& tp)
+    : isRunning(false),
+      _tp(tp)
   { }
 
   ~Core()
@@ -49,6 +52,9 @@ public:
   void loadProtocol(std::string path);
   void loadConverter(std::string path);
   void createMapping(std::string uri);
+
+private:
+  void processMessage(MetaMessage* msg);
 };
 
 #endif /* CORE__HPP_ */

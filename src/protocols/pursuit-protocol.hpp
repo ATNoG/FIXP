@@ -20,6 +20,7 @@
 
 #include "../plugin-protocol.hpp"
 #include "concurrent-blocking-queue.hpp"
+#include "thread-pool.hpp"
 
 #include <thread>
 #include <blackadder.hpp>
@@ -36,7 +37,8 @@ private:
   std::thread _msg_sender;
 
 public:
-  PursuitProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue);
+  PursuitProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
+                  ThreadPool& tp);
   ~PursuitProtocol();
 
   void start();
@@ -44,6 +46,9 @@ public:
 
   std::string getProtocol() { return "pursuit"; };
   std::string installMapping(std::string uri);
+
+protected:
+  void processMessage(MetaMessage* msg);
 
 private:
   void startReceiver();

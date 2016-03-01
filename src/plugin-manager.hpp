@@ -21,6 +21,7 @@
 #include "plugin-protocol.hpp"
 #include "plugin-converter.hpp"
 #include "concurrent-blocking-queue.hpp"
+#include "thread-pool.hpp"
 
 #include <map>
 #include <thread>
@@ -56,7 +57,8 @@ public:
 
   void stop();
   void loadProtocol(std::string path,
-                    ConcurrentBlockingQueue<MetaMessage*>& queue);
+                    ConcurrentBlockingQueue<MetaMessage*>& queue,
+                    ThreadPool& tp);
   void loadConverter(std::string path);
 
   std::vector<std::string> installMapping(std::string uri);

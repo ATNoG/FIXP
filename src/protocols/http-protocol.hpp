@@ -19,6 +19,8 @@
 #define HTTP_PROTOCOL__HPP_
 
 #include "../plugin-protocol.hpp"
+#include "concurrent-blocking-queue.hpp"
+#include "thread-pool.hpp"
 
 #include <thread>
 
@@ -31,7 +33,8 @@ private:
   std::thread _msg_sender;
 
 public:
-  HttpProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue);
+  HttpProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
+               ThreadPool& tp);
   ~HttpProtocol();
 
   void start();
@@ -39,6 +42,9 @@ public:
 
   std::string getProtocol() { return "http"; };
   std::string installMapping(std::string uri);
+
+protected:
+  void processMessage(MetaMessage* msg);
 
 private:
   void startReceiver();

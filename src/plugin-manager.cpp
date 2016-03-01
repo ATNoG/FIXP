@@ -39,7 +39,8 @@ void PluginManager::stop()
 }
 
 void PluginManager::loadProtocol(std::string path,
-                                 ConcurrentBlockingQueue<MetaMessage*>& queue)
+                                 ConcurrentBlockingQueue<MetaMessage*>& queue,
+                                 ThreadPool& tp)
 {
   boost::filesystem::path file(path);
   if(!boost::filesystem::exists(file) ||
@@ -49,7 +50,7 @@ void PluginManager::loadProtocol(std::string path,
 
   // Create protocol plugin
   boost::shared_ptr<PluginProtocol> protocol
-         = PluginProtocolFactory::createPlugin(path, queue);
+         = PluginProtocolFactory::createPlugin(path, queue, tp);
   _protocols.emplace(std::piecewise_construct,
                      std::forward_as_tuple(protocol->getProtocol()),
                      std::forward_as_tuple(protocol));

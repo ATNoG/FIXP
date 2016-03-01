@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
   load_logger(verbosity);
 
   ThreadPool tp(numWorkers);
-  core = new Core();
+  core = new Core(tp);
 
   // Load plugins
   loadProtocols(*core, path_to_protocols);
