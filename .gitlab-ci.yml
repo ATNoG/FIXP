@@ -1,7 +1,7 @@
 image: debian:jessie
 
 before_script:
-  - ./install_requirements.sh
+  - ./.ci-scripts/install_requirements.sh
 
 stages:
   - build
@@ -9,6 +9,6 @@ stages:
 build_check:
  stage: build
  script:
-   - ./build.sh
+   - ./.ci-scripts/build.sh
  tags:
    - docker
