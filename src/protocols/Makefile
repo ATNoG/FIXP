@@ -14,7 +14,7 @@
 ##  You should have received a copy of the GNU General Public License
 ##  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-TARGET=pursuit-protocol.so http-protocol.so
+TARGET=pursuit-protocol.so http-protocol.so ndn-protocol.so
 SRC_DIR=.
 INCLUDE_DIR=../../include
 BUILD_DIR=../../dist/fixp-protocols
@@ -27,6 +27,9 @@ CPPFLAGS=-I$(INCLUDE_DIR) -std=c++11 -fPIC
 LDFLAGS=-shared
 LDLIBS=
 
+NDNCXXFLAGS=`pkg-config --cflags libndn-cxx`
+NDNLDFLAGS=`pkg-config --libs libndn-cxx`
+
 SOURCES=$(wildcard $(SRC_DIR)/*.cpp)
 OBJS=$(SOURCES:.cpp=.o)
 
@@ -37,6 +40,9 @@ $(BUILD_DIR):
 
 pursuit-protocol.so: $(SRC_DIR)/pursuit-protocol.cpp $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -lblackadder -lcryptopp
+
+ndn-protocol.so: $(SRC_DIR)/ndn-protocol.cpp $(BUILD_DIR)
+	$(CXX) $< $(CPPFLAGS) $(NDNCXXFLAGS) $(LDFLAGS) $(NDNLDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
 
 http-protocol.so: $(SRC_DIR)/http-protocol.cpp $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -lcurl
