@@ -52,7 +52,6 @@ NdnProtocol::NdnProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
 
 NdnProtocol::~NdnProtocol()
 {
-  _face.shutdown();
 }
 
 void NdnProtocol::start()
@@ -61,11 +60,17 @@ void NdnProtocol::start()
 
   _msg_receiver = std::thread(&NdnProtocol::startReceiver, this);
   _msg_sender = std::thread(&NdnProtocol::startSender, this);
+
+  _listen = std::thread(&Face::processEvents, &_face, time::milliseconds::zero(), true);
 }
 
 void NdnProtocol::stop()
 {
   isRunning = false;
+
+  _face.shutdown();
+  _listen.join();
+
   _msg_to_send.stop();
 
   _msg_receiver.detach();
@@ -128,7 +133,6 @@ void NdnProtocol::onRegisterFailed(const Name& prefix, const std::string& reason
 
 void NdnProtocol::startReceiver()
 {
-  _face.processEvents(time::milliseconds::zero(), true);
 }
 
 void NdnProtocol::startSender()

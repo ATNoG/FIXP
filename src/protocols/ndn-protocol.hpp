@@ -38,9 +38,9 @@ class NdnProtocol : public PluginProtocol
 private:
   std::thread _msg_receiver;
   std::thread _msg_sender;
+  std::thread _listen;
   Face _face;
   KeyChain _key_chain;
-  std::map<std::string, Name> _pending_interest;
 
 public:
   NdnProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
