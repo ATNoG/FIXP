@@ -66,20 +66,31 @@ std::string HttpToNdnConverter::uriToAbsoluteForm(std::string uri, std::string p
 
 std::string
 HttpToNdnConverter::convertContent(MetaMessage& in,
-                                       std::vector<std::string>& uris,
-                                       std::map<std::string, std::string>& mappings)
+                                   std::vector<std::string>& uris,
+                                   std::map<std::string, std::string>& mappings)
 {
   // Adapt each URI to cope with foreign network
   std::string content = in._contentPayload;
   for(auto item : uris) {
+    // Use absolute URIs
+    std::string o_uri = item;
     if(item.find("://") == std::string::npos) {
-      // Relative URIs are not changed
-      continue;
+      o_uri = uriToAbsoluteForm(item, in._uri);
     }
 
     // Replace URI on the content
-    std::string f_uri = "\"" + item + "\"";
-    f_uri.replace(1, std::string(HTTP_SCHEMA).size(), std::string(NDN_SCHEMA));
+    std::map<std::string, std::string>::iterator it = std::find_if(mappings.begin(),
+                                                                   mappings.end(),
+                                                                   [=](std::pair<std::string, std::string> it) {
+                                                                     if(it.second.compare(o_uri) == 0
+                                                                        && it.first.find(NDN_SCHEMA) != std::string::npos) {
+                                                                       return true;
+                                                                     } else {
+                                                                       return false;
+                                                                     }
+                                                                   });
+    std::string f_uri;
+    f_uri.append("\"").append(it->first).append("\"");
 
     for(size_t pos = 0;
         (pos = content.find("\"" + item + "\"", pos)) != std::string::npos;
