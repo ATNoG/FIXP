@@ -113,14 +113,14 @@ void NdnProtocol::sendData(std::string data_name, std::string content)
 
   // Return Data packet to the requester
   std::cout << "[NDN Protocol Plugin]" << std::endl
-            << "Sending Data: " << *data << std::endl;
+            << " - Sending Data: " << *data << std::endl;
   _face.put(*data);
 }
 
 void NdnProtocol::onRegisterFailed(const Name& prefix, const std::string& reason)
 {
-  std::cout << "[NDN Protocol Plugin]" << std::endl
-            << "ERROR: Failed to register prefix \""
+  std::cerr << "[NDN Protocol Plugin]" << std::endl
+            << " - ERROR: Failed to register prefix \""
             << prefix << "\" in local hub's daemon (" << reason << ")"
             << std::endl;
   _face.shutdown();
@@ -142,7 +142,7 @@ void NdnProtocol::startSender()
       return;
     }
     std::cout << "[NDN Protocol Plugin]" << std::endl
-                             << "Processing next message in the queue ("
+                             << " - Processing next message in the queue ("
                              << out->_uri << ")" << std::endl;
 
     std::function<void()> func(std::bind(&NdnProtocol::processMessage, this, out));
@@ -153,7 +153,7 @@ void NdnProtocol::startSender()
 void NdnProtocol::processMessage(MetaMessage* msg)
 {
   std::cout << "[NDN Protocol Plugin]" << std::endl
-                             << " - Starting publishing item ("
+                             << " - Processing incoming message ("
                              << msg->_uri << ")" << std::endl;
 
   sendData(msg->_uri.substr(std::string(SCHEMA).size(),
