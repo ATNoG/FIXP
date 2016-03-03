@@ -90,21 +90,27 @@ void Core::processMessage(MetaMessage* msg)
     }
 
     // Extract existent URIs and create mappings to other architectures
-    std::vector<std::string> uris;
-    uris = pm.getConverterPlugin(msg->_uri, out->_uri)->extractUrisFrom(*msg);
+    boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(msg->_uri, out->_uri);
+    if(converter) {
+      std::vector<std::string> uris;
+      uris = converter->extractUrisFrom(*msg);
 
-    for(auto item : uris) {
-      // Use absolute URIs
-      std::string o_uri = item;
-      if(item.find("://") == std::string::npos) {
-        o_uri = pm.getConverterPlugin(msg->_uri, out->_uri)->uriToAbsoluteForm(item, msg->_uri);
+      for(auto item : uris) {
+        // Use absolute URIs
+        std::string o_uri = item;
+        if(item.find("://") == std::string::npos) {
+          o_uri = converter->uriToAbsoluteForm(item, msg->_uri);
+        }
+
+       createMapping(o_uri);
       }
 
-     createMapping(o_uri);
+      // Adapt URIs in the content to cope with the destination architecture
+      out->_contentPayload = converter->convertContent(*msg, uris, _mappings);
+    } else {
+      // If no converter is found send the content without conversion
+      out->_contentPayload = msg->_contentPayload;
     }
-
-    // Adapt URIs in the content to cope with the destination architecture
-    out->_contentPayload = pm.getConverterPlugin(msg->_uri, out->_uri)->convertContent(*msg, uris, _mappings);
 
     // Send message to destination network architecture
     pm.getProtocolPlugin(out->_uri.substr(0, out->_uri.find("://")))->sendMessage(out);

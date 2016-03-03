@@ -103,5 +103,9 @@ boost::shared_ptr<PluginProtocol> PluginManager::getProtocolPlugin(std::string p
 boost::shared_ptr<PluginConverter> PluginManager::getConverterPlugin(std::string o_uri, std::string f_uri)
 {
   std::string converter = extractSchema(o_uri) + "-to-" + extractSchema(f_uri);
-  return _converters.find(converter)->second;
+  if(_converters.find(converter) != _converters.end()) {
+    return _converters.find(converter)->second;
+  } else {
+    return boost::shared_ptr<PluginConverter>();
+  }
 }
