@@ -24,6 +24,7 @@
 
 #include <atomic>
 #include <map>
+#include <vector>
 #include <string>
 
 class Core
@@ -35,6 +36,7 @@ private:
   ThreadPool& _tp;
 
   std::map<std::string, std::string> _mappings;
+  std::map<std::string, std::vector<std::string>> _waiting_for_response;
   ConcurrentBlockingQueue<MetaMessage*> _queue;
 
 public:

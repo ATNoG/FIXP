@@ -41,7 +41,6 @@ void Core::createMapping(std::string uri)
               << " - New mapping: " << f_uri << " -> "
               << uri << std::endl;
 
-    _mappings.emplace(uri, f_uri);
     _mappings.emplace(f_uri, uri);
   }
 }
@@ -78,42 +77,75 @@ void Core::start()
 
 void Core::processMessage(MetaMessage* msg)
 {
-    MetaMessage* out = new MetaMessage();
+    std::vector<std::string> out_uris;
+
+    // Check if message is identified by a foreign URI
+    // (i.e., foreign URI exists in mappings)
     std::map<std::string, std::string>::iterator it;
     if((it = _mappings.find(msg->_uri)) != _mappings.end()) {
-      out->_uri = it->second;
+      out_uris.push_back(it->second);
+
+      // Message will (eventually) be replied
+      std::map<std::string, std::vector<std::string>>::iterator it_wait;
+      if((it_wait = _waiting_for_response.find(it->second)) != _waiting_for_response.end()) {
+        it_wait->second.push_back(msg->_uri);
+      } else {
+        std::vector<std::string> vec;
+        vec.push_back(msg->_uri);
+        _waiting_for_response[it->second] = vec;
+      }
+
     } else {
+    // Let's assume that is an original URI
+    // (i.e., response to a previous request)
+      std::map<std::string, std::vector<std::string>>::iterator it_wait;
+      if((it_wait = _waiting_for_response.find(msg->_uri)) != _waiting_for_response.end()) {
+        out_uris = it_wait->second;
+      }
+
+      // FIXME: make it thread-safe
+      _waiting_for_response.erase(msg->_uri);
+    }
+
+    if(out_uris.size() == 0) {
       std::cout << "[FIXP (Core)]" << std::endl
                 << " - Mapping for " << msg->_uri
                 << " not found" << std::endl;
+
+      delete msg;
       return;
     }
 
-    // Extract existent URIs and create mappings to other architectures
-    boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(msg->_uri, out->_uri);
-    if(converter) {
-      std::vector<std::string> uris;
-      uris = converter->extractUrisFrom(*msg);
+    for(auto item : out_uris) {
+      MetaMessage* out = new MetaMessage();
+      out->_uri = item;
 
-      for(auto item : uris) {
-        // Use absolute URIs
-        std::string o_uri = item;
-        if(item.find("://") == std::string::npos) {
-          o_uri = converter->uriToAbsoluteForm(item, msg->_uri);
+      // Extract existent URIs and create mappings to other architectures
+      boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(msg->_uri, out->_uri);
+      if(converter) {
+        std::vector<std::string> uris;
+        uris = converter->extractUrisFrom(*msg);
+
+        for(auto item : uris) {
+          // Use absolute URIs
+          std::string o_uri = item;
+          if(item.find("://") == std::string::npos) {
+            o_uri = converter->uriToAbsoluteForm(item, msg->_uri);
+          }
+
+         createMapping(o_uri);
         }
 
-       createMapping(o_uri);
+        // Adapt URIs in the content to cope with the destination architecture
+        out->_contentPayload = converter->convertContent(*msg, uris, _mappings);
+      } else {
+        // If no converter is found send the content without conversion
+        out->_contentPayload = msg->_contentPayload;
       }
 
-      // Adapt URIs in the content to cope with the destination architecture
-      out->_contentPayload = converter->convertContent(*msg, uris, _mappings);
-    } else {
-      // If no converter is found send the content without conversion
-      out->_contentPayload = msg->_contentPayload;
+      // Send message to destination network architecture
+      pm.getProtocolPlugin(out->_uri.substr(0, out->_uri.find("://")))->sendMessage(out);
     }
-
-    // Send message to destination network architecture
-    pm.getProtocolPlugin(out->_uri.substr(0, out->_uri.find("://")))->sendMessage(out);
 
     // Release the kraken
     delete msg;

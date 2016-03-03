@@ -79,9 +79,18 @@ HttpToPursuitConverter::convertContent(MetaMessage& in,
     }
 
     // Replace URI on the content
+    std::map<std::string, std::string>::iterator it = std::find_if(mappings.begin(),
+                                                                   mappings.end(),
+                                                                   [=](std::pair<std::string, std::string> it) {
+                                                                     if(it.second.compare(o_uri) == 0
+                                                                        && it.first.find(PURSUIT_SCHEMA) != std::string::npos) {
+                                                                       return true;
+                                                                     } else {
+                                                                       return false;
+                                                                     }
+                                                                   });
     std::string f_uri;
-   
-    f_uri.append("\"").append(mappings.find(o_uri)->second).append("\"");
+    f_uri.append("\"").append(it->first).append("\"");
 
     size_t pos;
     while((pos = content.find("\"" + item + "\"", pos + f_uri.size()))
