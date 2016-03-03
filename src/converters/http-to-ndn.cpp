@@ -38,8 +38,6 @@ HttpToNdnConverter::extractUrisFrom(MetaMessage& in)
   std::vector<std::string> ret;
   std::string content = in._contentPayload;
 
-  std::cout << "Content:\n" << content << std::endl;
-
   std::smatch match;
   std::regex expression("(href|src)=\"(.*?)\"");
   while(std::regex_search(content, match, expression)) {
