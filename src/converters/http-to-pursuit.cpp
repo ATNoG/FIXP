@@ -92,9 +92,9 @@ HttpToPursuitConverter::convertContent(MetaMessage& in,
     std::string f_uri;
     f_uri.append("\"").append(it->first).append("\"");
 
-    size_t pos;
-    while((pos = content.find("\"" + item + "\"", pos + f_uri.size()))
-              != std::string::npos) {
+    for(size_t pos = 0;
+        (pos = content.find("\"" + item + "\"", pos)) != std::string::npos;
+        pos += f_uri.size()) {
       content.replace(pos, item.size() + 2, f_uri);
     }
   }
