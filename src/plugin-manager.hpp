@@ -42,12 +42,12 @@ public:
   {
     // Delete protocol plugins
     for(auto item : _protocols) {
-      delete item.second.get();
+      item.second.reset();
     }
 
     // Delete converter plugins
     for (auto item : _converters) {
-      delete item.second.get();
+      item.second.reset();
     }
 
     // Delete plugins
