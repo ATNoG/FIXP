@@ -31,6 +31,10 @@ LDLIBS=-ldl -lpthread -lboost_program_options -lboost_system -lboost_filesystem
 SOURCES=$(wildcard $(SRC_DIR)/*.cpp)
 OBJS=$(SOURCES:.cpp=.o)
 
+all: $(EXEC)
+	@ set -e ; \
+	$(foreach dir, $(PLUGINS_DIR), make $@ -C $(dir);)
+
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
@@ -39,10 +43,6 @@ $(EXEC): $(OBJS) $(BUILD_DIR)
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CPPFLAGS) -c $< -o $@
-
-all: $(EXEC)
-	@ set -e ; \
-	$(foreach dir, $(PLUGINS_DIR), make $@ -C $(dir);)
 
 clean:
 	@ set -e ; \
