@@ -28,7 +28,7 @@ public:
   HtmlConverter() { };
   ~HtmlConverter() { };
 
-  std::string getFileType() { return "html"; };
+  std::string getFileType() { return "text/html"; };
   std::map<std::string, std::string> extractUrisFromContent(std::string uri, std::string content);
   std::string uriToAbsoluteForm(std::string uri, std::string parent);
   std::string convertContent(std::string content, std::map<std::string, std::string>& mappings);

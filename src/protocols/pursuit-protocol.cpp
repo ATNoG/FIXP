@@ -153,8 +153,8 @@ void PursuitProtocol::processMessage(MetaMessage* msg)
                                     DOMAIN_LOCAL,
                                     NULL,
                                     0,
-                                    (void*) msg->_contentPayload.c_str(),
-                                    msg->_contentPayload.size());
+                                    (void*) msg->getContentData().c_str(),
+                                    msg->getContentData().size());
 
   // Release the kraken
   delete msg;

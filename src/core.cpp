@@ -121,14 +121,13 @@ void Core::processMessage(MetaMessage* msg)
       out->_uri = item;
 
       // Extract existent URIs and create mappings to other architectures
-      boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin("html"); //FIXME
+      boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(msg->getContentType());
       if(converter) {
         std::map<std::string, std::string> uris;
-        uris = converter->extractUrisFromContent(msg->_uri, msg->_contentPayload);
+        uris = converter->extractUrisFromContent(msg->_uri, msg->getContentData());
 
         std::map<std::string, std::string> mappings_;
         for(auto& item : uris) {
-          std::cout << "Here\n" << std::flush;
           createMapping(item.second);
 
           // Adapt URIs in the content to cope with the destination architecture
@@ -144,11 +143,14 @@ void Core::processMessage(MetaMessage* msg)
                                                                          });
 
           mappings_.emplace(item.first, it->first);
-          out->_contentPayload = converter->convertContent(msg->_contentPayload, mappings_);
         }
+
+        out->setContent(msg->getContentType(),
+                        converter->convertContent(msg->getContentData(),
+                                                  mappings_));
       } else {
         // If no converter is found send the content without conversion
-        out->_contentPayload = msg->_contentPayload;
+        out->_content = msg->_content;
       }
 
       // Send message to destination network architecture

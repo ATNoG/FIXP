@@ -162,5 +162,5 @@ void NdnProtocol::processMessage(MetaMessage* msg)
 
   sendData(msg->_uri.substr(std::string(SCHEMA).size(),
                             std::string::npos),
-           msg->_contentPayload);
+           msg->getContentData());
 }

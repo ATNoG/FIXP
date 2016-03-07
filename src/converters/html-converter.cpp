@@ -73,8 +73,6 @@ HtmlConverter::convertContent(std::string content,
   // Adapt each URI to cope with foreign network
   std::string tmp = content;
   for(auto& uris : mappings) {
-    std::cout << "Converting: " << uris.first << "->" << uris.second << std::flush << std::endl;
-
     // Replace URI on the content
     std::string o_uri;
     o_uri.append("\"").append(uris.first).append("\"");

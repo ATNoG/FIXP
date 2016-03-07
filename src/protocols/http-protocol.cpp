@@ -49,13 +49,15 @@ size_t getHttpContent(void *content, size_t size, size_t nmemb, std::string *dat
   return content_size;
 }
 
-std::string requestHttpUri(std::string uri)
+std::tuple<std::string, std::string> requestHttpUri(std::string uri)
 {
   std::cout << "[HTTP Protocol Plugin]" << std::endl
             << " - Requesting" << uri << std::endl;
 
   CURL *curl;
   CURLcode res;
+
+  std::string type;
   std::string content;
 
   curl = curl_easy_init();
@@ -71,10 +73,22 @@ std::string requestHttpUri(std::string uri)
                 << "] Unable to get " << uri << std::endl;
     }
 
+    char* t;
+    res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &t);
+    if(res != CURLE_OK || !t) {
+      std::cout << "[HTTP Protocol Plugin]" << std::endl
+                << "[" << curl_easy_strerror(res)
+                << "] Unable to get content type for " << uri << std::endl;
+
+      type = "";
+    } else {
+      type = t;
+    }
+
     curl_easy_cleanup(curl);
   }
 
-  return content;
+  return std::make_tuple(type.substr(0, type.find(";")), content);
 }
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -146,12 +160,12 @@ void HttpProtocol::startSender()
 void HttpProtocol::processMessage(MetaMessage* msg)
 {
   // Request content from the original network
-  std::string contentPayload = requestHttpUri(msg->_uri);
+  std::tuple<std::string, std::string> content = requestHttpUri(msg->_uri);
 
   // Send received response to Core
   MetaMessage* response = new MetaMessage();
   response->_uri = msg->_uri;
-  response->_contentPayload = contentPayload;
+  response->setContent(std::get<0>(content), std::get<1>(content));
 
   std::cout << "[HTTP Protocol Plugin]" << std::endl
             << " Retrieving the response of " << msg->_uri

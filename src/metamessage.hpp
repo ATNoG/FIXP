@@ -24,25 +24,58 @@
 
 class MetaMessage
 {
+private:
+  class Content {
+
+  public:
+    Content() { };
+    Content(std::string type, std::string data)
+      : _type(type), _data(data)
+    { };
+
+    std::string _type;
+    std::string _data;
+  };
+
 public:
   std::string _uri;
   std::string _metadata;
-  std::string _contentPayload;
+  Content _content;
 
 public:
   MetaMessage()
   { };
 
-  MetaMessage(std::string uri, std::string metadata, std::string contentPayload)
-    : _uri(uri), _metadata(metadata), _contentPayload(contentPayload)
+  MetaMessage(std::string uri, std::string metadata, std::string contentType, std::string contentData)
+    : _uri(uri), _metadata(metadata), _content(contentType, contentData)
   { }
 
   MetaMessage(MetaMessage*& rhs)
   {
     _uri = rhs->_uri;
     _metadata = rhs->_metadata;
-    _contentPayload = rhs->_contentPayload;
+    _content = rhs->_content;
+  }
 
+  void setContent(std::string type, std::string data)
+  {
+    _content._type = type;
+    _content._data = data;
+  }
+
+  std::string getContentData()
+  {
+    return _content._data;
+  }
+
+  std::string getContentType()
+  {
+    return _content._type;
+  }
+
+  void setContentType(std::string type)
+  {
+    _content._type = type;
   }
 };
 
