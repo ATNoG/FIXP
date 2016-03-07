@@ -31,20 +31,19 @@ extern "C" void destroy_object(HtmlConverter* object)
 }
 
 std::map<std::string, std::string>
-HtmlConverter::extractUrisFromContent(std::string uri, std::string& content)
+HtmlConverter::extractUrisFromContent(std::string uri, std::string content)
 {
   std::map<std::string, std::string> uris;
-  std::string tmp = content;
 
   std::smatch match;
   std::regex expression("(href|src)=\"(.*?)\"");
-  while(std::regex_search(tmp, match, expression)) {
+  while(std::regex_search(content, match, expression)) {
     std::cout << "[HTML Converter Plugin]" << std::endl
               << " - Found URI in content: " << match[2].str()
               << std::endl;
     uris.emplace(match[2].str(), uriToAbsoluteForm(match[2].str(), uri));
 
-    tmp = match.suffix().str();
+    content = match.suffix().str();
   }
 
   return uris;
@@ -68,7 +67,7 @@ std::string HtmlConverter::uriToAbsoluteForm(std::string uri, std::string parent
 }
 
 std::string
-HtmlConverter::convertContent(std::string& content,
+HtmlConverter::convertContent(std::string content,
                               std::map<std::string, std::string>& mappings)
 {
   // Adapt each URI to cope with foreign network
