@@ -94,13 +94,13 @@ void NdnProtocol::onInterest(const InterestFilter& filter, const Interest& inter
             << "Receiving Interest: " << interest << std::endl;
 
   MetaMessage* in = new MetaMessage();
-  in->_uri = SCHEMA + interest.getName().toUri().substr(1, std::string::npos);
+  in->setUri(SCHEMA + interest.getName().toUri().substr(1, std::string::npos));
   std::cout << "[NDN Protocol Plugin]" << std::endl
                            << " - Received request for "
-                           << in->_uri << std::endl;
+                           << in->getUri() << std::endl;
 
   std::cout << "[NDN Protocol Plugin]" << std::endl
-                           << " - Retrieving request of " << in->_uri
+                           << " - Retrieving request of " << in->getUri()
                            << " to FIXP" << std::endl;
   receivedMessage(in);
 }
@@ -147,7 +147,7 @@ void NdnProtocol::startSender()
     }
     std::cout << "[NDN Protocol Plugin]" << std::endl
                              << " - Processing next message in the queue ("
-                             << out->_uri << ")" << std::endl;
+                             << out->getUri() << ")" << std::endl;
 
     std::function<void()> func(std::bind(&NdnProtocol::processMessage, this, out));
     _tp.schedule(std::move(func));
@@ -158,9 +158,9 @@ void NdnProtocol::processMessage(MetaMessage* msg)
 {
   std::cout << "[NDN Protocol Plugin]" << std::endl
                              << " - Processing incoming message ("
-                             << msg->_uri << ")" << std::endl;
+                             << msg->getUri() << ")" << std::endl;
 
-  sendData(msg->_uri.substr(std::string(SCHEMA).size(),
+  sendData(msg->getUri().substr(std::string(SCHEMA).size(),
                             std::string::npos),
            msg->getContentData());
 }

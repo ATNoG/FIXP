@@ -150,7 +150,7 @@ void HttpProtocol::startSender()
 
     std::cout << "[HTTP Protocol Plugin]"  << std::endl
               << " - Processing next message in the queue ("
-              << out->_uri << ")" << std::endl;
+              << out->getUri() << ")" << std::endl;
 
     std::function<void()> func(std::bind(&HttpProtocol::processMessage, this, out));
     _tp.schedule(std::move(func));
@@ -160,15 +160,15 @@ void HttpProtocol::startSender()
 void HttpProtocol::processMessage(MetaMessage* msg)
 {
   // Request content from the original network
-  std::tuple<std::string, std::string> content = requestHttpUri(msg->_uri);
+  std::tuple<std::string, std::string> content = requestHttpUri(msg->getUri());
 
   // Send received response to Core
   MetaMessage* response = new MetaMessage();
-  response->_uri = msg->_uri;
+  response->setUri(msg->getUri());
   response->setContent(std::get<0>(content), std::get<1>(content));
 
   std::cout << "[HTTP Protocol Plugin]" << std::endl
-            << " Retrieving the response of " << msg->_uri
+            << " Retrieving the response of " << msg->getUri()
             << " to FIXP" << std::endl;
   receivedMessage(response);
 

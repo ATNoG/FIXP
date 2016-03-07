@@ -67,7 +67,7 @@ void Core::start()
 
     std::cout << "[FIXP (Core)]" << std::endl
               << " - Processing next message in the queue ("
-              << in->_uri << ")" << std::endl;
+              << in->getUri() << ")" << std::endl;
 
     // Schedule message processing
     std::function<void()> func(std::bind(&Core::processMessage, this, in));
@@ -82,16 +82,16 @@ void Core::processMessage(MetaMessage* msg)
     // Check if message is identified by a foreign URI
     // (i.e., foreign URI exists in mappings)
     std::map<std::string, std::string>::iterator it;
-    if((it = _mappings.find(msg->_uri)) != _mappings.end()) {
+    if((it = _mappings.find(msg->getUri())) != _mappings.end()) {
       out_uris.push_back(it->second);
 
       // Message will (eventually) be replied
       std::map<std::string, std::vector<std::string>>::iterator it_wait;
       if((it_wait = _waiting_for_response.find(it->second)) != _waiting_for_response.end()) {
-        it_wait->second.push_back(msg->_uri);
+        it_wait->second.push_back(msg->getUri());
       } else {
         std::vector<std::string> vec;
-        vec.push_back(msg->_uri);
+        vec.push_back(msg->getUri());
         _waiting_for_response[it->second] = vec;
       }
 
@@ -99,17 +99,17 @@ void Core::processMessage(MetaMessage* msg)
     // Let's assume that is an original URI
     // (i.e., response to a previous request)
       std::map<std::string, std::vector<std::string>>::iterator it_wait;
-      if((it_wait = _waiting_for_response.find(msg->_uri)) != _waiting_for_response.end()) {
+      if((it_wait = _waiting_for_response.find(msg->getUri())) != _waiting_for_response.end()) {
         out_uris = it_wait->second;
       }
 
       // FIXME: make it thread-safe
-      _waiting_for_response.erase(msg->_uri);
+      _waiting_for_response.erase(msg->getUri());
     }
 
     if(out_uris.size() == 0) {
       std::cout << "[FIXP (Core)]" << std::endl
-                << " - Mapping for " << msg->_uri
+                << " - Mapping for " << msg->getUri()
                 << " not found" << std::endl;
 
       delete msg;
@@ -118,13 +118,13 @@ void Core::processMessage(MetaMessage* msg)
 
     for(auto item : out_uris) {
       MetaMessage* out = new MetaMessage();
-      out->_uri = item;
+      out->setUri(item);
 
       // Extract existent URIs and create mappings to other architectures
       boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(msg->getContentType());
       if(converter) {
         std::map<std::string, std::string> uris;
-        uris = converter->extractUrisFromContent(msg->_uri, msg->getContentData());
+        uris = converter->extractUrisFromContent(msg->getUri(), msg->getContentData());
 
         std::map<std::string, std::string> mappings_;
         for(auto& item : uris) {
@@ -135,7 +135,7 @@ void Core::processMessage(MetaMessage* msg)
                                                                          _mappings.end(),
                                                                          [=](std::pair<std::string, std::string> it) {
                                                                            if(it.second.compare(item.second) == 0
-                                                                              && it.first.find(out->_uri.substr(0, out->_uri.find("://"))) != std::string::npos) {
+                                                                              && it.first.find(out->getUri().substr(0, out->getUri().find("://"))) != std::string::npos) {
                                                                              return true;
                                                                            } else {
                                                                              return false;
@@ -150,11 +150,11 @@ void Core::processMessage(MetaMessage* msg)
                                                   mappings_));
       } else {
         // If no converter is found send the content without conversion
-        out->_content = msg->_content;
+        out->setContent(msg->getContentType(), msg->getContentData());
       }
 
       // Send message to destination network architecture
-      pm.getProtocolPlugin(out->_uri.substr(0, out->_uri.find("://")))->sendMessage(out);
+      pm.getProtocolPlugin(out->getUri().substr(0, out->getUri().find("://")))->sendMessage(out);
     }
 
     // Release the kraken

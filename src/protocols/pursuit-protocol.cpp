@@ -108,13 +108,13 @@ void PursuitProtocol::startReceiver()
     switch (ev.type) {
       case START_PUBLISH: {
         MetaMessage* in = new MetaMessage();
-        in->_uri = SCHEMA + chararray_to_hex(ev.id);
+        in->setUri(SCHEMA + chararray_to_hex(ev.id));
         std::cout << "[PURSUIT Protocol Plugin]" << std::endl
                   << " - Received request for "
-                  << in->_uri << std::endl;
+                  << in->getUri() << std::endl;
 
         std::cout << "[PURSUIT Protocol Plugin]" << std::endl
-                  << " - Retrieving request of " << in->_uri
+                  << " - Retrieving request of " << in->getUri()
                   << " to FIXP" << std::endl;
         receivedMessage(in);
       } break;
@@ -135,7 +135,7 @@ void PursuitProtocol::startSender()
 
     std::cout << "[PURSUIT Protocol Plugin]" << std::endl
               << "Processing next message in the queue ("
-              << out->_uri << ")" << std::endl;
+              << out->getUri() << ")" << std::endl;
 
     std::function<void()> func(std::bind(&PursuitProtocol::processMessage, this, out));
     _tp.schedule(std::move(func));
@@ -146,9 +146,9 @@ void PursuitProtocol::processMessage(MetaMessage* msg)
 {
   std::cout << "[PURSUIT Protocol Plugin]" << std::endl
             << " - Starting publishing item ("
-            << msg->_uri << ")" << std::endl;
+            << msg->getUri() << ")" << std::endl;
 
-  ba->publish_data(hex_to_chararray(msg->_uri.substr(std::string(SCHEMA).size(),
+  ba->publish_data(hex_to_chararray(msg->getUri().substr(std::string(SCHEMA).size(),
                                                      std::string::npos)),
                                     DOMAIN_LOCAL,
                                     NULL,

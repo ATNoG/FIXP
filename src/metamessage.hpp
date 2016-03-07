@@ -18,26 +18,22 @@
 #ifndef META_MESSAGE__HPP_
 #define META_MESSAGE__HPP_
 
-#include "metamessage.hpp"
-
 #include <string>
+
+class Content {
+public:
+  Content() { };
+  Content(std::string type, std::string data)
+    : _type(type), _data(data)
+  { };
+
+  std::string _type;
+  std::string _data;
+};
 
 class MetaMessage
 {
 private:
-  class Content {
-
-  public:
-    Content() { };
-    Content(std::string type, std::string data)
-      : _type(type), _data(data)
-    { };
-
-    std::string _type;
-    std::string _data;
-  };
-
-public:
   std::string _uri;
   std::string _metadata;
   Content _content;
@@ -61,6 +57,26 @@ public:
   {
     _content._type = type;
     _content._data = data;
+  }
+
+  std::string getUri()
+  {
+    return _uri;
+  }
+
+  void setUri(std::string uri)
+  {
+    _uri = uri;
+  }
+
+  std::string getMetadata()
+  {
+    return _metadata;
+  }
+
+  void setMetadata(std::string metadata)
+  {
+    _metadata = metadata;
   }
 
   std::string getContentData()
