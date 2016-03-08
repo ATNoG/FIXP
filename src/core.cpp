@@ -91,42 +91,41 @@ void Core::processMessage(MetaMessage* msg)
 {
     std::vector<std::string> out_uris;
 
-    { // Begin: Locking scope
+    // Begin: Locking scope
+    {
+      // Check if message is identified by a foreign URI
+      // (i.e., foreign URI exists in mappings)
+      std::shared_lock<std::shared_timed_mutex> lock_map(_mappings_mutex);
+      auto it = _mappings.find(msg->getUri());
+      if(it != _mappings.end()) {
+        out_uris.push_back(it->second);
+        lock_map.unlock();
 
-    // Check if message is identified by a foreign URI
-    // (i.e., foreign URI exists in mappings)
-    std::shared_lock<std::shared_timed_mutex> lock_map(_mappings_mutex);
-    auto it = _mappings.find(msg->getUri());
-    if(it != _mappings.end()) {
-      out_uris.push_back(it->second);
-      lock_map.unlock();
+        // Message will (eventually) be replied
+        std::unique_lock<std::shared_timed_mutex> lock_wait(_waiting_for_response_mutex);
+        auto it_wait = _waiting_for_response.find(it->second);
+        if(it_wait != _waiting_for_response.end()) {
+          it_wait->second.push_back(msg->getUri());
+        } else {
+          std::vector<std::string> vec;
+          vec.push_back(msg->getUri());
+          _waiting_for_response[it->second] = vec;
+        }
+        lock_wait.unlock();
 
-      // Message will (eventually) be replied
-      std::unique_lock<std::shared_timed_mutex> lock_wait(_waiting_for_response_mutex);
-      auto it_wait = _waiting_for_response.find(it->second);
-      if(it_wait != _waiting_for_response.end()) {
-        it_wait->second.push_back(msg->getUri());
       } else {
-        std::vector<std::string> vec;
-        vec.push_back(msg->getUri());
-        _waiting_for_response[it->second] = vec;
+        lock_map.unlock();
+      // Let's assume that is an original URI
+      // (i.e., response to a previous request)
+        std::unique_lock<std::shared_timed_mutex> lock_wait(_waiting_for_response_mutex);
+        auto it_wait = _waiting_for_response.find(msg->getUri());
+        if(it_wait != _waiting_for_response.end()) {
+          out_uris = it_wait->second;
+        }
+
+        _waiting_for_response.erase(msg->getUri());
+        lock_wait.unlock();
       }
-      lock_wait.unlock();
-
-    } else {
-      lock_map.unlock();
-    // Let's assume that is an original URI
-    // (i.e., response to a previous request)
-      std::unique_lock<std::shared_timed_mutex> lock_wait(_waiting_for_response_mutex);
-      auto it_wait = _waiting_for_response.find(msg->getUri());
-      if(it_wait != _waiting_for_response.end()) {
-        out_uris = it_wait->second;
-      }
-
-      _waiting_for_response.erase(msg->getUri());
-      lock_wait.unlock();
-    }
-
     } // End: Locking scope
 
     if(out_uris.size() == 0) {
