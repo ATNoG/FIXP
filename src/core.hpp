@@ -53,7 +53,7 @@ public:
 
   void loadProtocol(std::string path);
   void loadConverter(std::string path);
-  void createMapping(std::string uri);
+  void createMapping(std::string o_uri);
 
 private:
   void processMessage(MetaMessage* msg);

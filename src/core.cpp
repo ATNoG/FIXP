@@ -29,19 +29,30 @@ void Core::loadConverter(std::string path)
   pm.loadConverter(path);
 }
 
-void Core::createMapping(std::string uri)
+void Core::createMapping(std::string o_uri)
 {
-  if(_mappings.find(uri) != _mappings.end())
-    return;
+  auto it = std::find_if(_mappings.begin(),
+                         _mappings.end(),
+                         [=](std::pair<std::string, std::string> item) {
+                           if(item.second == o_uri) {
+                             return true;
+                           } else {
+                             return false;
+                           }
+                         });
 
-  std::vector<std::string> f_uris = pm.installMapping(uri);
+  if(it != _mappings.end()) {
+    return;
+  }
+
+  std::vector<std::string> f_uris = pm.installMapping(o_uri);
   for(auto f_uri : f_uris) {
     //FIXME: handle empty strings
     std::cout << "[FIXP (Core)]" << std::endl
               << " - New mapping: " << f_uri << " -> "
-              << uri << std::endl;
+              << o_uri << std::endl;
 
-    _mappings.emplace(f_uri, uri);
+    _mappings.emplace(f_uri, o_uri);
   }
 }
 
