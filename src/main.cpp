@@ -16,6 +16,7 @@
  */
 
 #include "core.hpp"
+#include "logger.hpp"
 #include "thread-pool.hpp"
 
 #include <iostream>
@@ -69,6 +70,11 @@ void loadConverters(Core& core, std::string path)
   }
 }
 
+void loadLogger(unsigned short level)
+{
+  Logger::getInstance().setLevel(static_cast<Level>(level));
+}
+
 void load_resources(Core& core, std::string path)
 {
   std::ifstream file(path);
@@ -100,6 +106,7 @@ int main(int argc, char* argv[])
   std::string path_to_protocols;
   std::string path_to_converters;
   int numWorkers;
+  unsigned short verbosity;
 
   boost::program_options::options_description desc("Options");
   boost::program_options::variables_map vm;
@@ -113,6 +120,8 @@ int main(int argc, char* argv[])
                 "Path to protocol convertion plugins")
       ("workers,w", boost::program_options::value<int>(&numWorkers)->default_value(-1),
                 "Number of conversions that can be handle simultaneously")
+      ("verbose,v", boost::program_options::value<unsigned short>(&verbosity)->default_value(3),
+                "Produce verbose output")
       ("help,h", "Display configuration options");
 
     boost::program_options::store(boost::program_options::parse_command_line(argc,
@@ -135,6 +144,8 @@ int main(int argc, char* argv[])
       return 1;
     }
   }
+
+  loadLogger(verbosity);
 
   ThreadPool tp(numWorkers);
   core = new Core(tp);
