@@ -23,7 +23,7 @@ CC=gcc
 CXX=g++
 RM=rm
 CFLAGS=
-CPPFLAGS=-I$(INCLUDE_DIR) -std=c++11 -fPIC
+CPPFLAGS=-I$(INCLUDE_DIR) -std=c++14 -fPIC
 LDFLAGS=-shared
 LDLIBS=
 

@@ -29,23 +29,22 @@ void Core::loadConverter(std::string path)
   pm.loadConverter(path);
 }
 
-void Core::createMapping(std::string o_uri)
+std::vector<std::string> Core::createMapping(std::string o_uri)
 {
-  auto it = std::find_if(_mappings.begin(),
-                         _mappings.end(),
-                         [=](std::pair<std::string, std::string> item) {
-                           if(item.second == o_uri) {
-                             return true;
-                           } else {
-                             return false;
-                           }
-                         });
+  std::vector<std::string> f_uris;
 
-  if(it != _mappings.end()) {
-    return;
+  std::unique_lock<std::shared_timed_mutex> lock(_mappings_mutex);
+  for(auto& item : _mappings) {
+    if(item.second == o_uri) {
+      f_uris.push_back(item.first);
+    }
   }
 
-  std::vector<std::string> f_uris = pm.installMapping(o_uri);
+  if(f_uris.size() != 0) {
+    return f_uris;
+  }
+
+  f_uris = pm.installMapping(o_uri);
   for(auto f_uri : f_uris) {
     //FIXME: handle empty strings
     std::cout << "[FIXP (Core)]" << std::endl
@@ -54,6 +53,8 @@ void Core::createMapping(std::string o_uri)
 
     _mappings.emplace(f_uri, o_uri);
   }
+
+  return f_uris;
 }
 
 void Core::stop()
@@ -90,13 +91,18 @@ void Core::processMessage(MetaMessage* msg)
 {
     std::vector<std::string> out_uris;
 
+    { // Begin: Locking scope
+
     // Check if message is identified by a foreign URI
     // (i.e., foreign URI exists in mappings)
+    std::shared_lock<std::shared_timed_mutex> lock_map(_mappings_mutex);
     auto it = _mappings.find(msg->getUri());
     if(it != _mappings.end()) {
       out_uris.push_back(it->second);
+      lock_map.unlock();
 
       // Message will (eventually) be replied
+      std::unique_lock<std::shared_timed_mutex> lock_wait(_waiting_for_response_mutex);
       auto it_wait = _waiting_for_response.find(it->second);
       if(it_wait != _waiting_for_response.end()) {
         it_wait->second.push_back(msg->getUri());
@@ -105,18 +111,23 @@ void Core::processMessage(MetaMessage* msg)
         vec.push_back(msg->getUri());
         _waiting_for_response[it->second] = vec;
       }
+      lock_wait.unlock();
 
     } else {
+      lock_map.unlock();
     // Let's assume that is an original URI
     // (i.e., response to a previous request)
+      std::unique_lock<std::shared_timed_mutex> lock_wait(_waiting_for_response_mutex);
       auto it_wait = _waiting_for_response.find(msg->getUri());
       if(it_wait != _waiting_for_response.end()) {
         out_uris = it_wait->second;
       }
 
-      // FIXME: make it thread-safe
       _waiting_for_response.erase(msg->getUri());
+      lock_wait.unlock();
     }
+
+    } // End: Locking scope
 
     if(out_uris.size() == 0) {
       std::cout << "[FIXP (Core)]" << std::endl
@@ -137,28 +148,21 @@ void Core::processMessage(MetaMessage* msg)
         std::map<std::string, std::string> uris;
         uris = converter->extractUrisFromContent(msg->getUri(), msg->getContentData());
 
-        std::map<std::string, std::string> mappings_;
-        for(auto& item : uris) {
-          createMapping(item.second);
+        std::map<std::string, std::string> mappings_for_convertion;
+        for(auto& o_uri : uris) {
+          std::vector<std::string> f_uris = createMapping(o_uri.second);
 
-          // Adapt URIs in the content to cope with the destination architecture
-          auto it = std::find_if(_mappings.begin(),
-                                 _mappings.end(),
-                                 [=](std::pair<std::string, std::string> it) {
-                                   if(it.second.compare(item.second) == 0
-                                      && it.first.find(out->getUri().substr(0, out->getUri().find("://"))) != std::string::npos) {
-                                      return true;
-                                    } else {
-                                      return false;
-                                    }
-                                  });
-
-          mappings_.emplace(item.first, it->first);
+          for(auto& f_uri : f_uris) {
+            if(f_uri.find(out->getUri().substr(0, out->getUri().find("://"))) != std::string::npos) {
+              mappings_for_convertion.emplace(o_uri.first, f_uri);
+              break;
+            }
+          }
         }
 
         out->setContent(msg->getContentType(),
                         converter->convertContent(msg->getContentData(),
-                                                  mappings_));
+                                                  mappings_for_convertion));
       } else {
         // If no converter is found send the content without conversion
         out->setContent(msg->getContentType(), msg->getContentData());

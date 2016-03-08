@@ -24,8 +24,9 @@
 
 #include <atomic>
 #include <map>
-#include <vector>
+#include <shared_mutex>
 #include <string>
+#include <vector>
 
 class Core
 {
@@ -36,7 +37,11 @@ private:
   ThreadPool& _tp;
 
   std::map<std::string, std::string> _mappings;
+  mutable std::shared_timed_mutex _mappings_mutex;
+
   std::map<std::string, std::vector<std::string>> _waiting_for_response;
+  mutable std::shared_timed_mutex _waiting_for_response_mutex;
+
   ConcurrentBlockingQueue<MetaMessage*> _queue;
 
 public:
@@ -53,7 +58,7 @@ public:
 
   void loadProtocol(std::string path);
   void loadConverter(std::string path);
-  void createMapping(std::string o_uri);
+  std::vector<std::string> createMapping(std::string o_uri);
 
 private:
   void processMessage(MetaMessage* msg);
