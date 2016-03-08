@@ -81,13 +81,13 @@ void Core::processMessage(MetaMessage* msg)
 
     // Check if message is identified by a foreign URI
     // (i.e., foreign URI exists in mappings)
-    std::map<std::string, std::string>::iterator it;
-    if((it = _mappings.find(msg->getUri())) != _mappings.end()) {
+    auto it = _mappings.find(msg->getUri());
+    if(it != _mappings.end()) {
       out_uris.push_back(it->second);
 
       // Message will (eventually) be replied
-      std::map<std::string, std::vector<std::string>>::iterator it_wait;
-      if((it_wait = _waiting_for_response.find(it->second)) != _waiting_for_response.end()) {
+      auto it_wait = _waiting_for_response.find(it->second);
+      if(it_wait != _waiting_for_response.end()) {
         it_wait->second.push_back(msg->getUri());
       } else {
         std::vector<std::string> vec;
@@ -98,8 +98,8 @@ void Core::processMessage(MetaMessage* msg)
     } else {
     // Let's assume that is an original URI
     // (i.e., response to a previous request)
-      std::map<std::string, std::vector<std::string>>::iterator it_wait;
-      if((it_wait = _waiting_for_response.find(msg->getUri())) != _waiting_for_response.end()) {
+      auto it_wait = _waiting_for_response.find(msg->getUri());
+      if(it_wait != _waiting_for_response.end()) {
         out_uris = it_wait->second;
       }
 
@@ -131,16 +131,16 @@ void Core::processMessage(MetaMessage* msg)
           createMapping(item.second);
 
           // Adapt URIs in the content to cope with the destination architecture
-          std::map<std::string, std::string>::iterator it = std::find_if(_mappings.begin(),
-                                                                         _mappings.end(),
-                                                                         [=](std::pair<std::string, std::string> it) {
-                                                                           if(it.second.compare(item.second) == 0
-                                                                              && it.first.find(out->getUri().substr(0, out->getUri().find("://"))) != std::string::npos) {
-                                                                             return true;
-                                                                           } else {
-                                                                             return false;
-                                                                           }
-                                                                         });
+          auto it = std::find_if(_mappings.begin(),
+                                 _mappings.end(),
+                                 [=](std::pair<std::string, std::string> it) {
+                                   if(it.second.compare(item.second) == 0
+                                      && it.first.find(out->getUri().substr(0, out->getUri().find("://"))) != std::string::npos) {
+                                      return true;
+                                    } else {
+                                      return false;
+                                    }
+                                  });
 
           mappings_.emplace(item.first, it->first);
         }
