@@ -38,11 +38,11 @@ HtmlConverter::extractUrisFromContent(std::string uri, std::string content)
 
   std::smatch match;
   std::regex expression("(href|src)=\"(.*?)\"");
-  while(std::regex_search(content, match, expression)) {
-    FIFU_LOG_INFO("(HTML Converter) Found " + match[2].str() + " resource in " + uri);
-    uris.emplace(match[2].str(), uriToAbsoluteForm(match[2].str(), uri));
 
-    content = match.suffix().str();
+  std::sregex_token_iterator end;
+  for(std::sregex_token_iterator i(content.begin(), content.end(), expression, 2); i != end; ++i) {
+    FIFU_LOG_INFO("(HTML Converter) Found " + i->str() + " resource in " + uri);
+    uris.emplace(i->str(), uriToAbsoluteForm(i->str(), uri));
   }
 
   return uris;
@@ -81,6 +81,7 @@ HtmlConverter::convertContent(std::string content,
     for(size_t pos = 0;
         (pos = tmp.find(o_uri, pos)) != std::string::npos;
         pos += f_uri.size()) {
+      FIFU_LOG_INFO("(HTML Converter) Replacing " + o_uri + " by " + f_uri)
       tmp.replace(pos, o_uri.size(), f_uri);
     }
   }
