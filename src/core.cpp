@@ -17,6 +17,7 @@
 
 #include "core.hpp"
 #include "logger.hpp"
+#include "utils.hpp"
 
 #include <iostream>
 
@@ -136,9 +137,15 @@ void Core::processMessage(const MetaMessage* msg)
       MetaMessage* out = new MetaMessage();
       out->setUri(item);
 
-      // Extract existent URIs and create mappings to other architectures
-      boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(msg->getContentType());
+      std::string contentType = msg->getContentType();
+      if(contentType == "") {
+        contentType = discoverContentType(msg->getContentData());
+        FIFU_LOG_WARN("(Core) Detected content type (" + contentType +") of " + msg->getUri());
+      }
+
+      boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(contentType);
       if(converter) {
+        // Extract existent URIs and create mappings to other architectures
         std::map<std::string, std::string> uris;
         uris = converter->extractUrisFromContent(msg->getUri(), msg->getContentData());
 
@@ -154,12 +161,12 @@ void Core::processMessage(const MetaMessage* msg)
           }
         }
 
-        out->setContent(msg->getContentType(),
+        out->setContent(contentType,
                         converter->convertContent(msg->getContentData(),
                                                   mappings_for_convertion));
       } else {
         // If no converter is found send the content without conversion
-        out->setContent(msg->getContentType(), msg->getContentData());
+        out->setContent(contentType, msg->getContentData());
       }
 
       // Send message to destination network architecture
