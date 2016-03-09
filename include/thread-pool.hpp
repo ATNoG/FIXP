@@ -65,7 +65,7 @@ public:
     _isRunning = false;
     _job_queue.stop();
 
-    joinAllWorkerThreads();
+    clear();
   }
 
   void schedule(const std::function<void()>&& function)
@@ -92,13 +92,17 @@ private:
     }
   }
 
-  void joinAllWorkerThreads()
+  void clear()
+  {
+    joinWorkers();
+    _workers.clear();
+  }
+
+  void joinWorkers()
   {
     for(auto& item : _workers) {
       item.join();
     }
-
-    _workers.clear();
   }
 
 };
