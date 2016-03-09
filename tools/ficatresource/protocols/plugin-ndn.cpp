@@ -31,7 +31,7 @@ extern "C" void destroy_object(NdnPlugin* object)
   delete object;
 }
 
-std::string removeSchemaFromUri(std::string uri)
+std::string removeSchemaFromUri(const std::string uri)
 {
   std::string schema_division = "://";
   size_t pos = uri.find(schema_division); //TODO: Schema division not found
@@ -52,7 +52,7 @@ void NdnPlugin::onTimeout(const Interest& interest)
   std::cout << "Timeout" << interest << std::endl;
 }
 
-void NdnPlugin::processUri(std::string uri)
+void NdnPlugin::processUri(const std::string uri)
 {
   std::cout << "NdnPlugin requesting " << uri << std::endl << std::flush;
   Interest interest(Name(removeSchemaFromUri(uri)));

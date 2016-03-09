@@ -56,14 +56,14 @@ public:
   }
 
   void stop();
-  void loadProtocol(std::string path,
-                    ConcurrentBlockingQueue<MetaMessage*>& queue,
+  void loadProtocol(const std::string path,
+                    ConcurrentBlockingQueue<const MetaMessage*>& queue,
                     ThreadPool& tp);
-  void loadConverter(std::string path);
+  void loadConverter(const std::string path);
 
-  std::vector<std::string> installMapping(std::string uri);
-  boost::shared_ptr<PluginProtocol> getProtocolPlugin(std::string protocol);
-  boost::shared_ptr<PluginConverter> getConverterPlugin(std::string fileType);
+  std::vector<std::string> installMapping(const std::string uri);
+  boost::shared_ptr<PluginProtocol> getProtocolPlugin(const std::string protocol);
+  boost::shared_ptr<PluginConverter> getConverterPlugin(const std::string fileType);
 };
 
 #endif /* PLUGIN_MANAGER__HPP_ */

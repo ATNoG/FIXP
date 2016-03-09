@@ -20,17 +20,17 @@
 
 #include <iostream>
 
-void Core::loadProtocol(std::string path)
+void Core::loadProtocol(const std::string path)
 {
   pm.loadProtocol(path, _queue, _tp);
 }
 
-void Core::loadConverter(std::string path)
+void Core::loadConverter(const std::string path)
 {
   pm.loadConverter(path);
 }
 
-std::vector<std::string> Core::createMapping(std::string o_uri)
+std::vector<std::string> Core::createMapping(const std::string o_uri)
 {
   std::vector<std::string> f_uris;
 
@@ -67,7 +67,7 @@ void Core::start()
 {
   isRunning = true;
 
-  MetaMessage* in;
+  const MetaMessage* in;
   while(isRunning) {
     // Process next message
     try {
@@ -83,7 +83,7 @@ void Core::start()
   }
 }
 
-void Core::processMessage(MetaMessage* msg)
+void Core::processMessage(const MetaMessage* msg)
 {
     FIFU_LOG_INFO("(Core) Processing message (" + msg->getUri() + ")");
     std::vector<std::string> out_uris;

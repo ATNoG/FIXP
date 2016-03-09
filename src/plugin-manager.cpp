@@ -26,7 +26,7 @@
 #include <boost/filesystem.hpp>
 
 ///////////////////////////////////////////////////////////////////////////////
-std::string extractSchema(std::string uri)
+std::string extractSchema(const std::string uri)
 {
   return uri.substr(0, uri.find("://"));
 }
@@ -40,8 +40,8 @@ void PluginManager::stop()
   }
 }
 
-void PluginManager::loadProtocol(std::string path,
-                                 ConcurrentBlockingQueue<MetaMessage*>& queue,
+void PluginManager::loadProtocol(const std::string path,
+                                 ConcurrentBlockingQueue<const MetaMessage*>& queue,
                                  ThreadPool& tp)
 {
   boost::filesystem::path file(path);
@@ -60,7 +60,7 @@ void PluginManager::loadProtocol(std::string path,
   FIFU_LOG_INFO("(PluginManager) Loaded & Started " + protocol->getProtocol() + " protocol");
 }
 
-void PluginManager::loadConverter(std::string path)
+void PluginManager::loadConverter(const std::string path)
 {
   boost::filesystem::path file(path);
   if(!boost::filesystem::exists(file) ||
@@ -77,7 +77,7 @@ void PluginManager::loadConverter(std::string path)
   FIFU_LOG_INFO("(PluginManager) Loaded " + converter->getFileType() + " converter");
 }
 
-std::vector<std::string> PluginManager::installMapping(std::string uri)
+std::vector<std::string> PluginManager::installMapping(const std::string uri)
 {
   std::vector<std::string> ret;
   for (auto item : _protocols) {
@@ -89,12 +89,12 @@ std::vector<std::string> PluginManager::installMapping(std::string uri)
   return ret;
 }
 
-boost::shared_ptr<PluginProtocol> PluginManager::getProtocolPlugin(std::string protocol)
+boost::shared_ptr<PluginProtocol> PluginManager::getProtocolPlugin(const std::string protocol)
 {
   return _protocols.find(protocol)->second;
 }
 
-boost::shared_ptr<PluginConverter> PluginManager::getConverterPlugin(std::string fileType)
+boost::shared_ptr<PluginConverter> PluginManager::getConverterPlugin(const std::string fileType)
 {
   if(_converters.find(fileType) != _converters.end()) {
     return _converters.find(fileType)->second;

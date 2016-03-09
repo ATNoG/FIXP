@@ -21,7 +21,7 @@
 #include <cryptopp/sha.h>
 #include <iostream>
 
-extern "C" PursuitProtocol* create_plugin_object(ConcurrentBlockingQueue<MetaMessage*>& queue,
+extern "C" PursuitProtocol* create_plugin_object(ConcurrentBlockingQueue<const MetaMessage*>& queue,
                                                  ThreadPool& tp)
 {
   return new PursuitProtocol(queue, tp);
@@ -50,7 +50,7 @@ std::string createForeignUri(std::string o_uri)
 }
 ///////////////////////////////////////////////////////////////////////////////
 
-PursuitProtocol::PursuitProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
+PursuitProtocol::PursuitProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
                                  ThreadPool& tp)
     : PluginProtocol(queue, tp)
 {
@@ -82,7 +82,7 @@ void PursuitProtocol::stop()
   _msg_sender.join();
 }
 
-std::string PursuitProtocol::installMapping(std::string uri)
+std::string PursuitProtocol::installMapping(const std::string uri)
 {
   std::string f_uri = createForeignUri(uri);
 
@@ -111,7 +111,7 @@ void PursuitProtocol::startReceiver()
 
 void PursuitProtocol::startSender()
 {
-  MetaMessage* out;
+  const MetaMessage* out;
 
   while(isRunning) {
     try {
@@ -127,7 +127,7 @@ void PursuitProtocol::startSender()
   }
 }
 
-void PursuitProtocol::processMessage(MetaMessage* msg)
+void PursuitProtocol::processMessage(const MetaMessage* msg)
 {
   FIFU_LOG_INFO("(PURSUIT Protocol) Processing message (" + msg->getUri() + ")");
 
@@ -143,7 +143,7 @@ void PursuitProtocol::processMessage(MetaMessage* msg)
   delete msg;
 }
 
-int PursuitProtocol::publishScope(std::string name)
+int PursuitProtocol::publishScope(const std::string name)
 {
   size_t id_init_pos    = name.length() - PURSUIT_ID_LEN_HEX_FORMAT;
   std::string prefix_id = name.substr(0, id_init_pos);
@@ -159,7 +159,7 @@ int PursuitProtocol::publishScope(std::string name)
   return 0;
 }
 
-int PursuitProtocol::publishInfo(std::string name)
+int PursuitProtocol::publishInfo(const std::string name)
 {
   size_t id_init_pos    = name.length() - PURSUIT_ID_LEN_HEX_FORMAT;
   std::string prefix_id = name.substr(0, id_init_pos);

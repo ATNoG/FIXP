@@ -43,25 +43,25 @@ private:
   KeyChain _key_chain;
 
 public:
-  NdnProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
+  NdnProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
               ThreadPool& tp);
   ~NdnProtocol();
 
   void start();
   void stop();
 
-  std::string getProtocol() { return "ndn"; };
-  std::string installMapping(std::string uri);
+  std::string getProtocol() const { return "ndn"; };
+  std::string installMapping(const std::string uri);
 
 protected:
-  void processMessage(MetaMessage* msg);
+  void processMessage(const MetaMessage* msg);
 
 private:
   void startReceiver();
   void startSender();
   void onInterest(const InterestFilter& filter, const Interest& interest);
   void onRegisterFailed(const Name& prefix, const std::string& reason);
-  void sendData(std::string data_name, std::string content);
+  void sendData(const std::string data_name, const std::string content);
 };
 
 #endif /* NDN_PROTOCOL__HPP_ */

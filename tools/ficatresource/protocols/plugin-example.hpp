@@ -27,8 +27,8 @@ public:
     : Plugin()
   { }
 
-  std::string getSchema() { return "example"; }
-  void processUri(std::string uri);
+  std::string getSchema() const { return "example"; }
+  void processUri(const std::string uri);
 };
 
 #endif /* EXAMPLE_PLUGIN__HPP_ */

@@ -27,7 +27,7 @@
 class PluginFactory {
 public:
 
-  static boost::shared_ptr<Plugin> createPlugin(std::string path_to_plugin)
+  static const boost::shared_ptr<Plugin> createPlugin(const std::string path_to_plugin)
   {
     void* handle = dlopen(path_to_plugin.c_str(), RTLD_LAZY);
 

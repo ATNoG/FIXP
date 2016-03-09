@@ -33,24 +33,24 @@ private:
   std::thread _msg_sender;
 
 public:
-  HttpProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
+  HttpProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
                ThreadPool& tp);
   ~HttpProtocol();
 
   void start();
   void stop();
 
-  std::string getProtocol() { return "http"; };
-  std::string installMapping(std::string uri);
+  std::string getProtocol() const { return "http"; };
+  std::string installMapping(const std::string uri);
 
 protected:
-  void processMessage(MetaMessage* msg);
+  void processMessage(const MetaMessage* msg);
 
 private:
   void startReceiver();
   void startSender();
 
-  void sendMessage(MetaMessage* out);
+  void sendMessage(const MetaMessage* out);
 };
 
 #endif /* HTTP_PROTOCOL__HPP_ */

@@ -42,7 +42,7 @@ private:
   std::map<std::string, std::vector<std::string>> _waiting_for_response;
   mutable std::shared_timed_mutex _waiting_for_response_mutex;
 
-  ConcurrentBlockingQueue<MetaMessage*> _queue;
+  ConcurrentBlockingQueue<const MetaMessage*> _queue;
 
 public:
   Core(ThreadPool& tp)
@@ -56,12 +56,12 @@ public:
   void start();
   void stop();
 
-  void loadProtocol(std::string path);
-  void loadConverter(std::string path);
-  std::vector<std::string> createMapping(std::string o_uri);
+  void loadProtocol(const std::string path);
+  void loadConverter(const std::string path);
+  std::vector<std::string> createMapping(const std::string o_uri);
 
 private:
-  void processMessage(MetaMessage* msg);
+  void processMessage(const MetaMessage* msg);
 };
 
 #endif /* CORE__HPP_ */

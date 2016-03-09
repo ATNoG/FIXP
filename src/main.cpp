@@ -36,7 +36,7 @@ void signalHandler(int signum)
     core->stop();
 }
 
-void loadProtocols(Core& core, std::string path)
+void loadProtocols(Core& core, const std::string path)
 {
   boost::filesystem::path dir(path);
   if(!boost::filesystem::exists(dir) ||
@@ -53,7 +53,7 @@ void loadProtocols(Core& core, std::string path)
   }
 }
 
-void loadConverters(Core& core, std::string path)
+void loadConverters(Core& core, const std::string path)
 {
   boost::filesystem::path dir(path);
   if(!boost::filesystem::exists(dir) ||
@@ -70,7 +70,7 @@ void loadConverters(Core& core, std::string path)
   }
 }
 
-void loadLogger(unsigned short level)
+void loadLogger(const unsigned short level)
 {
   Logger::getInstance().setLevel(static_cast<Level>(level));
 }

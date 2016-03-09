@@ -32,7 +32,7 @@ extern "C" void destroy_object(PursuitPlugin* object)
   delete object;
 }
 
-int PursuitPlugin::subscribe_item(std::string uri)
+int PursuitPlugin::subscribe_item(const std::string uri)
 {
   std::string uri_wo_schema = uri.substr(std::string(SCHEMA).size());
 
@@ -49,7 +49,7 @@ int PursuitPlugin::subscribe_item(std::string uri)
   return 0;
 }
 
-int PursuitPlugin::unsubscribe_item(std::string uri)
+int PursuitPlugin::unsubscribe_item(const std::string uri)
 {
   std::string uri_wo_schema = uri.substr(std::string(SCHEMA).size());
 
@@ -66,7 +66,7 @@ int PursuitPlugin::unsubscribe_item(std::string uri)
   return 0;
 }
 
-void PursuitPlugin::processUri(std::string uri)
+void PursuitPlugin::processUri(const std::string uri)
 {
   ba = Blackadder::Instance(true);
 

@@ -29,12 +29,12 @@ public:
     : Plugin()
   { }
 
-  std::string getSchema() { return "pursuit"; }
-  void processUri(std::string uri);
+  std::string getSchema() const { return "pursuit"; }
+  void processUri(const std::string uri);
 
 private:
-  int subscribe_item(std::string uri);
-  int unsubscribe_item(std::string uri);
+  int subscribe_item(const std::string uri);
+  int unsubscribe_item(const std::string uri);
 
   Blackadder *ba;
 };

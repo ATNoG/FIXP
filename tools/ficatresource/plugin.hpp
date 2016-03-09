@@ -26,8 +26,8 @@ public:
   Plugin() { };
   ~Plugin() { };
 
-  virtual std::string getSchema() = 0;
-  virtual void processUri(std::string uri) = 0;
+  virtual std::string getSchema() const = 0;
+  virtual void processUri(const std::string uri) = 0;
 };
 
 #endif /* PLUGIN__HPP_ */

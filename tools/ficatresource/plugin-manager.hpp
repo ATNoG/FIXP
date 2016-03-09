@@ -31,8 +31,8 @@ private:
 public:
   PluginManager() { };
 
-  void loadPlugins(std::string path_to_plugins);
-  void forwardUriToPlugin(std::string uri);
+  void loadPlugins(const std::string path_to_plugins);
+  void forwardUriToPlugin(const std::string uri) const;
 };
 
 #endif /* PLUGIN_MANAGER__HPP_ */

@@ -22,7 +22,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/smart_ptr/make_shared.hpp>
 
-void PluginManager::loadPlugins(std::string path_to_plugins)
+void PluginManager::loadPlugins(const std::string path_to_plugins)
 {
   boost::filesystem::path path(path_to_plugins);
   if(!boost::filesystem::exists(path) ||
@@ -44,7 +44,7 @@ void PluginManager::loadPlugins(std::string path_to_plugins)
   }
 }
 
-void PluginManager::forwardUriToPlugin(std::string uri)
+void PluginManager::forwardUriToPlugin(const std::string uri) const
 {
   std::string schema = uri.substr(0, uri.find("://"));
 

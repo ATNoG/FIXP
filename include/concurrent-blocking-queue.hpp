@@ -68,7 +68,7 @@ public:
     _notifier.notify_one();
   }
 
-  T& pop()
+  const T& pop()
   {
     std::unique_lock<std::mutex> lock(_mutex);
     _notifier.wait(lock, [this](){return !_queue.empty() || _interrupted;});
@@ -81,7 +81,6 @@ public:
 
     return v;
   }
-
 };
 
 #endif /* CONCURRENT_BLOCKING_QUEUE__HPP_ */

@@ -23,7 +23,7 @@
 class Content {
 public:
   Content() { };
-  Content(std::string type, std::string data)
+  Content(const std::string type, const std::string data)
     : _type(type), _data(data)
   { };
 
@@ -42,7 +42,8 @@ public:
   MetaMessage()
   { };
 
-  MetaMessage(std::string uri, std::string metadata, std::string contentType, std::string contentData)
+  MetaMessage(const std::string uri, const std::string metadata,
+              const std::string contentType, const std::string contentData)
     : _uri(uri), _metadata(metadata), _content(contentType, contentData)
   { }
 
@@ -53,43 +54,43 @@ public:
     _content = rhs->_content;
   }
 
-  void setContent(std::string type, std::string data)
+  void setContent(const std::string type, const std::string data)
   {
     _content._type = type;
     _content._data = data;
   }
 
-  std::string getUri()
+  std::string getUri() const
   {
     return _uri;
   }
 
-  void setUri(std::string uri)
+  void setUri(const std::string uri)
   {
     _uri = uri;
   }
 
-  std::string getMetadata()
+  std::string getMetadata() const
   {
     return _metadata;
   }
 
-  void setMetadata(std::string metadata)
+  void setMetadata(const std::string metadata)
   {
     _metadata = metadata;
   }
 
-  std::string getContentData()
+  std::string getContentData() const
   {
     return _content._data;
   }
 
-  std::string getContentType()
+  std::string getContentType() const
   {
     return _content._type;
   }
 
-  void setContentType(std::string type)
+  void setContentType(const std::string type)
   {
     _content._type = type;
   }

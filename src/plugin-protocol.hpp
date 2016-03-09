@@ -29,15 +29,15 @@
 class PluginProtocol
 {
 private:
-  ConcurrentBlockingQueue<MetaMessage*>& _send_to_core;
+  ConcurrentBlockingQueue<const MetaMessage*>& _send_to_core;
 
 protected:
   std::atomic<bool> isRunning;
-  ConcurrentBlockingQueue<MetaMessage*> _msg_to_send;
+  ConcurrentBlockingQueue<const MetaMessage*> _msg_to_send;
   ThreadPool& _tp;
 
 public:
-  PluginProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
+  PluginProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
                  ThreadPool& tp)
     : _send_to_core(queue),
       _tp(tp),
@@ -50,21 +50,21 @@ public:
   virtual void start() = 0;
   virtual void stop() = 0;
 
-  virtual std::string getProtocol() = 0;
-  virtual std::string installMapping(std::string uri) = 0;
+  virtual std::string getProtocol() const = 0;
+  virtual std::string installMapping(const std::string uri) = 0;
 
-  void receivedMessage(MetaMessage* msg)
+  void receivedMessage(const MetaMessage* msg)
   {
     _send_to_core.push(msg);
   }
 
-  void sendMessage(MetaMessage* msg)
+  void sendMessage(const MetaMessage* msg)
   {
     _msg_to_send.push(msg);
   }
 
 protected:
-  virtual void processMessage(MetaMessage* msg) = 0;
+  virtual void processMessage(const MetaMessage* msg) = 0;
 };
 
 #endif /* PLUGIN_PROTOCOL__HPP_ */

@@ -35,8 +35,8 @@ public:
   void onData(const Interest& interest, const Data& data);
   void onTimeout(const Interest& interest);
 
-  std::string getSchema() { return "ndn"; }
-  void processUri(std::string uri);
+  std::string getSchema() const { return "ndn"; }
+  void processUri(const std::string uri);
 private:
 	Face _face;
 };

@@ -44,17 +44,17 @@ public:
     return instance;
   }
 
-  Level getLevel()
+  Level getLevel() const
   {
     return _level;
   }
 
-  void setLevel(Level level)
+  void setLevel(const Level level)
   {
     _level = level;
   }
 
-  void log(std::string level, std::string msg)
+  void log(const std::string level, const std::string msg)
   {
     std::lock_guard<std::mutex> lock(_mutex);
     std::clog << "[" << level << "] " << msg << std::endl;

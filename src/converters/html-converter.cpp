@@ -32,7 +32,7 @@ extern "C" void destroy_object(HtmlConverter* object)
 }
 
 std::map<std::string, std::string>
-HtmlConverter::extractUrisFromContent(std::string uri, std::string content)
+HtmlConverter::extractUrisFromContent(const std::string uri, const std::string content)
 {
   std::map<std::string, std::string> uris;
 
@@ -48,7 +48,7 @@ HtmlConverter::extractUrisFromContent(std::string uri, std::string content)
   return uris;
 }
 
-std::string HtmlConverter::uriToAbsoluteForm(std::string uri, std::string parent)
+std::string HtmlConverter::uriToAbsoluteForm(const std::string uri, const std::string parent)
 {
   // URI already is in absolute form
   if(uri.find("://") != std::string::npos)
@@ -66,8 +66,8 @@ std::string HtmlConverter::uriToAbsoluteForm(std::string uri, std::string parent
 }
 
 std::string
-HtmlConverter::convertContent(std::string content,
-                              std::map<std::string, std::string>& mappings)
+HtmlConverter::convertContent(const std::string content,
+                              const std::map<std::string, std::string>& mappings)
 {
   // Adapt each URI to cope with foreign network
   std::string tmp = content;

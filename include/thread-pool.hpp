@@ -68,7 +68,7 @@ public:
     joinAllWorkerThreads();
   }
 
-  void schedule(std::function<void()>&& function)
+  void schedule(const std::function<void()>&& function)
   {
     _job_queue.push(new std::function<void()>(std::move(function)));
   }

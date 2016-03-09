@@ -22,7 +22,7 @@
 #include <curl/multi.h>
 #include <iostream>
 
-extern "C" HttpProtocol* create_plugin_object(ConcurrentBlockingQueue<MetaMessage*>& queue,
+extern "C" HttpProtocol* create_plugin_object(ConcurrentBlockingQueue<const MetaMessage*>& queue,
                                               ThreadPool& tp)
 {
   return new HttpProtocol(queue, tp);
@@ -34,13 +34,13 @@ extern "C" void destroy_object(HttpProtocol* object)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-std::string createForeignUri(std::string o_uri)
+std::string createForeignUri(const std::string o_uri)
 {
   //TODO
   return "";
 }
 
-size_t getHttpContent(void *content, size_t size, size_t nmemb, std::string *data)
+size_t getHttpContent(const void *content, const size_t size, const size_t nmemb, std::string *data)
 {
   size_t content_size = size * nmemb;
 
@@ -50,7 +50,7 @@ size_t getHttpContent(void *content, size_t size, size_t nmemb, std::string *dat
   return content_size;
 }
 
-std::tuple<std::string, std::string> requestHttpUri(std::string uri)
+const std::tuple<const std::string, const std::string> requestHttpUri(const std::string uri)
 {
   FIFU_LOG_INFO("(HTTP Protocol) Requesting " + uri);
 
@@ -89,7 +89,7 @@ std::tuple<std::string, std::string> requestHttpUri(std::string uri)
 }
 ///////////////////////////////////////////////////////////////////////////////
 
-HttpProtocol::HttpProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
+HttpProtocol::HttpProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
                            ThreadPool& tp)
     : PluginProtocol(queue, tp)
 { }
@@ -114,7 +114,7 @@ void HttpProtocol::start()
   _msg_sender = std::thread(&HttpProtocol::startSender, this);
 }
 
-std::string HttpProtocol::installMapping(std::string uri)
+std::string HttpProtocol::installMapping(const std::string uri)
 {
   std::string f_uri = createForeignUri(uri);
 
@@ -132,7 +132,7 @@ void HttpProtocol::startReceiver()
 
 void HttpProtocol::startSender()
 {
-  MetaMessage* out;
+  const MetaMessage* out;
   while(isRunning) {
     try {
       out = _msg_to_send.pop();
@@ -147,7 +147,7 @@ void HttpProtocol::startSender()
   }
 }
 
-void HttpProtocol::processMessage(MetaMessage* msg)
+void HttpProtocol::processMessage(const MetaMessage* msg)
 {
   FIFU_LOG_INFO("(HTTP Protocol) Processing message (" + msg->getUri() + ")");
 

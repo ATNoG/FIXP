@@ -25,7 +25,7 @@
 
 class PluginConverterFactory {
 public:
-  static boost::shared_ptr<PluginConverter> createPlugin(std::string path)
+  static const boost::shared_ptr<PluginConverter> createPlugin(const std::string path)
   {
     void* handle = dlopen(path.c_str(), RTLD_LAZY);
 

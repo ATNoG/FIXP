@@ -28,10 +28,10 @@ public:
   HtmlConverter() { };
   ~HtmlConverter() { };
 
-  std::string getFileType() { return "text/html"; };
-  std::map<std::string, std::string> extractUrisFromContent(std::string uri, std::string content);
-  std::string uriToAbsoluteForm(std::string uri, std::string parent);
-  std::string convertContent(std::string content, std::map<std::string, std::string>& mappings);
+  std::string getFileType() const { return "text/html"; };
+  std::map<std::string, std::string> extractUrisFromContent(const std::string uri, const std::string content);
+  std::string uriToAbsoluteForm(const std::string uri, const std::string parent);
+  std::string convertContent(const std::string content, const std::map<std::string, std::string>& mappings);
 };
 
 #endif /* HTML_CONVERTER__HPP_ */

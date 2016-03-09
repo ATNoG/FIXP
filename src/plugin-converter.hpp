@@ -29,10 +29,10 @@ public:
   PluginConverter() { };
   ~PluginConverter() { };
 
-  virtual std::string getFileType() = 0;
-  virtual std::map<std::string, std::string> extractUrisFromContent(std::string uri, std::string content) = 0;
-  virtual std::string uriToAbsoluteForm(std::string uri, std::string parent) = 0;
-  virtual std::string convertContent(std::string content, std::map<std::string, std::string>& mappings) = 0;
+  virtual std::string getFileType() const = 0;
+  virtual std::map<std::string, std::string> extractUrisFromContent(const std::string uri, const std::string content) = 0;
+  virtual std::string uriToAbsoluteForm(const std::string uri, const std::string parent) = 0;
+  virtual std::string convertContent(const std::string content, const std::map<std::string, std::string>& mappings) = 0;
 };
 
 #endif /* PLUGIN_CONVERTER__HPP_ */

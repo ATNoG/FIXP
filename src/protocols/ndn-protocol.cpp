@@ -20,7 +20,7 @@
 #include "ndn-protocol.hpp"
 #include "logger.hpp"
 
-extern "C" NdnProtocol* create_plugin_object(ConcurrentBlockingQueue<MetaMessage*>& queue,
+extern "C" NdnProtocol* create_plugin_object(ConcurrentBlockingQueue<const MetaMessage*>& queue,
                                              ThreadPool& tp)
 {
   return new NdnProtocol(queue, tp);
@@ -45,7 +45,7 @@ std::string createForeignUri(std::string o_uri)
 }
 ///////////////////////////////////////////////////////////////////////////////
 
-NdnProtocol::NdnProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
+NdnProtocol::NdnProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
                          ThreadPool& tp)
     : PluginProtocol(queue, tp)
 {
@@ -78,7 +78,7 @@ void NdnProtocol::stop()
   _msg_sender.join();
 }
 
-std::string NdnProtocol::installMapping(std::string uri)
+std::string NdnProtocol::installMapping(const std::string uri)
 {
   std::string f_uri = createForeignUri(uri);
 
@@ -99,7 +99,7 @@ void NdnProtocol::onInterest(const InterestFilter& filter, const Interest& inter
   receivedMessage(in);
 }
 
-void NdnProtocol::sendData(std::string data_name, std::string content)
+void NdnProtocol::sendData(const std::string data_name, const std::string content)
 {
   // Create Data packet
   shared_ptr<Data> data = make_shared<Data>();
@@ -127,7 +127,7 @@ void NdnProtocol::startReceiver()
 
 void NdnProtocol::startSender()
 {
-  MetaMessage* out;
+  const MetaMessage* out;
 
   while(isRunning) {
     try {
@@ -143,7 +143,7 @@ void NdnProtocol::startSender()
   }
 }
 
-void NdnProtocol::processMessage(MetaMessage* msg)
+void NdnProtocol::processMessage(const MetaMessage* msg)
 {
   FIFU_LOG_INFO("(NDN Protocol) Processing message (" + msg->getUri() + ")");
   sendData(msg->getUri().substr(std::string(SCHEMA).size(),

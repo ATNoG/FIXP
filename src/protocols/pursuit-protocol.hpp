@@ -37,25 +37,25 @@ private:
   std::thread _msg_sender;
 
 public:
-  PursuitProtocol(ConcurrentBlockingQueue<MetaMessage*>& queue,
+  PursuitProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
                   ThreadPool& tp);
   ~PursuitProtocol();
 
   void start();
   void stop();
 
-  std::string getProtocol() { return "pursuit"; };
-  std::string installMapping(std::string uri);
+  std::string getProtocol() const { return "pursuit"; };
+  std::string installMapping(const std::string uri);
 
 protected:
-  void processMessage(MetaMessage* msg);
+  void processMessage(const MetaMessage* msg);
 
 private:
   void startReceiver();
   void startSender();
 
-  int publishScope(std::string name);
-  int publishInfo(std::string name);
+  int publishScope(const std::string name);
+  int publishInfo(const std::string name);
 };
 
 #endif /* FP7_PURSUIT_PROTOCOL__HPP_ */
