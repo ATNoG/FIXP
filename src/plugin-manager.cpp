@@ -71,10 +71,12 @@ void PluginManager::loadConverter(const std::string path)
   // Create converter plugin
   boost::shared_ptr<PluginConverter> converter
          = PluginConverterFactory::createPlugin(path);
-  _converters.emplace(std::piecewise_construct,
-                      std::forward_as_tuple(converter->getFileType()),
-                      std::forward_as_tuple(converter));
-  FIFU_LOG_INFO("(PluginManager) Loaded " + converter->getFileType() + " converter");
+  for(auto& item : converter->getFileTypes()) {
+    _converters.emplace(std::piecewise_construct,
+                        std::forward_as_tuple(item),
+                        std::forward_as_tuple(converter));
+    FIFU_LOG_INFO("(PluginManager) Loaded " + item + " converter");
+  }
 }
 
 std::vector<std::string> PluginManager::installMapping(const std::string uri)

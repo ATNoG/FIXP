@@ -29,7 +29,7 @@ public:
   PluginConverter() { };
   ~PluginConverter() { };
 
-  virtual std::string getFileType() const = 0;
+  virtual std::vector<std::string> getFileTypes() const = 0;
   virtual std::map<std::string, std::string> extractUrisFromContent(const std::string uri, const std::string content) = 0;
   virtual std::string uriToAbsoluteForm(const std::string uri, const std::string parent) = 0;
   virtual std::string convertContent(const std::string content, const std::map<std::string, std::string>& mappings) = 0;
