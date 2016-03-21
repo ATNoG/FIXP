@@ -136,6 +136,7 @@ void Core::processMessage(const MetaMessage* msg)
     for(auto item : out_uris) {
       MetaMessage* out = new MetaMessage();
       out->setUri(item);
+      out->setMetadata(msg->getMetadata());
 
       std::string contentType = msg->getContentType();
       if(contentType == "") {

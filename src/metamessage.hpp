@@ -18,7 +18,16 @@
 #ifndef META_MESSAGE__HPP_
 #define META_MESSAGE__HPP_
 
+#include <map>
 #include <string>
+#include <vector>
+
+enum MetadataMessageType {
+  MESSAGE_TYPE_UNKNOWN    = -1,
+  MESSAGE_TYPE_REQUEST    =  0,
+  MESSAGE_TYPE_RESPONSE   =  1,
+  MESSAGE_TYPE_INDICATION =  2
+};
 
 class Content {
 public:
@@ -35,16 +44,16 @@ class MetaMessage
 {
 private:
   std::string _uri;
-  std::string _metadata;
+  std::map<std::string, std::string> _metadata;
   Content _content;
 
 public:
   MetaMessage()
   { };
 
-  MetaMessage(const std::string uri, const std::string metadata,
+  MetaMessage(const std::string uri,
               const std::string contentType, const std::string contentData)
-    : _uri(uri), _metadata(metadata), _content(contentType, contentData)
+    : _uri(uri), _content(contentType, contentData)
   { }
 
   MetaMessage(MetaMessage*& rhs)
@@ -70,14 +79,46 @@ public:
     _uri = uri;
   }
 
-  std::string getMetadata() const
+  std::map<std::string, std::string> getMetadata() const
   {
     return _metadata;
   }
 
-  void setMetadata(const std::string metadata)
+  void setMetadata(const std::map<std::string, std::string> metadata)
   {
     _metadata = metadata;
+  }
+
+
+  MetadataMessageType getMessageType() const
+  {
+    std::string messageType;
+
+    try {
+      messageType = _metadata.at("MessageType");
+    } catch(const std::out_of_range& e) {
+      return MESSAGE_TYPE_UNKNOWN;
+    }
+
+    std::vector<std::string> typeStr = {"request", "response", "indication"};
+    for(int i = 0; i < typeStr.size(); ++i) {
+      if(messageType == typeStr[i]) {
+        return (MetadataMessageType) i;
+      }
+    }
+
+    return MESSAGE_TYPE_UNKNOWN;
+  }
+
+  void setMessageType(const MetadataMessageType type)
+  {
+    if(type == MESSAGE_TYPE_REQUEST
+       || type == MESSAGE_TYPE_RESPONSE
+       || type == MESSAGE_TYPE_INDICATION) {
+      std::vector<std::string> typeStr = {"request", "response", "indication"};
+
+      _metadata.emplace("MessageType", typeStr[type]);
+    }
   }
 
   std::string getContentData() const
