@@ -41,7 +41,10 @@ std::string removeSchemaFromUri(std::string uri)
 
 std::string createForeignUri(std::string o_uri)
 {
-  return SCHEMA + removeSchemaFromUri(o_uri);
+  std::string f_uri;
+  f_uri.append(SCHEMA).append("/").append(removeSchemaFromUri(o_uri));
+
+  return f_uri;
 }
 ///////////////////////////////////////////////////////////////////////////////
 
