@@ -83,7 +83,7 @@ const std::tuple<const std::string, const std::string> requestHttpUri(const std:
     char* t;
     res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &t);
     if(res != CURLE_OK || !t) {
-      FIFU_LOG_INFO("(HTTP Protocol) Unable to get congent type for " + uri
+      FIFU_LOG_INFO("(HTTP Protocol) Unable to get content type for " + uri
                     + "[Error " + curl_easy_strerror(res) + "]");
       type = "";
     } else {
