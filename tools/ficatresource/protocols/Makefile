@@ -14,7 +14,7 @@
 ##  You should have received a copy of the GNU General Public License
 ##  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-TARGET=plugin-example.so plugin-pursuit.so plugin-ndn.so
+TARGET=plugin-example.so plugin-http.so plugin-ndn.so plugin-pursuit.so
 SRC_DIR=.
 INCLUDE_DIR=../../../include
 BUILD_DIR=../../../dist/tools/ficatresource-protocols
@@ -43,6 +43,9 @@ $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 plugin-example.so: $(SRC_DIR)/plugin-example.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
+
+plugin-http.so: $(SRC_DIR)/plugin-http.o $(BUILD_DIR)
+	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -lcurl
 
 plugin-ndn.so: $(SRC_DIR)/plugin-ndn.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(NDNCXXFLAGS) $(LDFLAGS) $(NDNLDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
