@@ -64,8 +64,6 @@ void NdnProtocol::start()
 
   _msg_receiver = std::thread(&NdnProtocol::startReceiver, this);
   _msg_sender = std::thread(&NdnProtocol::startSender, this);
-
-  _listen = std::thread(&Face::processEvents, &_face, time::milliseconds::zero(), true);
 }
 
 void NdnProtocol::stop()
@@ -161,6 +159,7 @@ void NdnProtocol::onTimeout(const Interest& interest)
 
 void NdnProtocol::startReceiver()
 {
+  _listen = std::thread(&Face::processEvents, &_face, time::milliseconds::zero(), true);
 }
 
 void NdnProtocol::startSender()
