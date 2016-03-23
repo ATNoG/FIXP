@@ -86,94 +86,94 @@ void Core::start()
 
 void Core::processMessage(const MetaMessage* msg)
 {
-    FIFU_LOG_INFO("(Core) Processing message (" + msg->getUri() + ")");
-    std::vector<std::string> out_uris;
+  FIFU_LOG_INFO("(Core) Processing message (" + msg->getUri() + ")");
+  std::vector<std::string> out_uris;
 
-    // Begin: Locking scope
-    {
-      // Check if message is identified by a foreign URI
-      // (i.e., foreign URI exists in mappings)
-      std::shared_lock<std::shared_timed_mutex> lock_map(_mappings_mutex);
-      auto it = _mappings.find(msg->getUri());
-      if(it != _mappings.end()) {
-        out_uris.push_back(it->second);
-        lock_map.unlock();
+  // Begin: Locking scope
+  {
+    // Check if message is identified by a foreign URI
+    // (i.e., foreign URI exists in mappings)
+    std::shared_lock<std::shared_timed_mutex> lock_map(_mappings_mutex);
+    auto it = _mappings.find(msg->getUri());
+    if(it != _mappings.end()) {
+      out_uris.push_back(it->second);
+      lock_map.unlock();
 
-        // Message will (eventually) be replied
-        std::unique_lock<std::shared_timed_mutex> lock_wait(_waiting_for_response_mutex);
-        auto it_wait = _waiting_for_response.find(it->second);
-        if(it_wait != _waiting_for_response.end()) {
-          it_wait->second.push_back(msg->getUri());
-        } else {
-          std::vector<std::string> vec;
-          vec.push_back(msg->getUri());
-          _waiting_for_response[it->second] = vec;
-        }
-        lock_wait.unlock();
-
+      // Message will (eventually) be replied
+      std::unique_lock<std::shared_timed_mutex> lock_wait(_waiting_for_response_mutex);
+      auto it_wait = _waiting_for_response.find(it->second);
+      if(it_wait != _waiting_for_response.end()) {
+        it_wait->second.push_back(msg->getUri());
       } else {
-        lock_map.unlock();
+        std::vector<std::string> vec;
+        vec.push_back(msg->getUri());
+        _waiting_for_response[it->second] = vec;
+      }
+      lock_wait.unlock();
+
+    } else {
+      lock_map.unlock();
       // Let's assume that is an original URI
       // (i.e., response to a previous request)
-        std::unique_lock<std::shared_timed_mutex> lock_wait(_waiting_for_response_mutex);
-        auto it_wait = _waiting_for_response.find(msg->getUri());
-        if(it_wait != _waiting_for_response.end()) {
-          out_uris = it_wait->second;
-        }
-
-        _waiting_for_response.erase(msg->getUri());
-        lock_wait.unlock();
+      std::unique_lock<std::shared_timed_mutex> lock_wait(_waiting_for_response_mutex);
+      auto it_wait = _waiting_for_response.find(msg->getUri());
+      if(it_wait != _waiting_for_response.end()) {
+        out_uris = it_wait->second;
       }
-    } // End: Locking scope
 
-    if(out_uris.size() == 0) {
-      FIFU_LOG_WARN("(Core) Mapping for " + msg->getUri() + " not found!");
+      _waiting_for_response.erase(msg->getUri());
+      lock_wait.unlock();
+    }
+  } // End: Locking scope
 
-      delete msg;
-      return;
+  if(out_uris.size() == 0) {
+    FIFU_LOG_WARN("(Core) Mapping for " + msg->getUri() + " not found!");
+
+    delete msg;
+    return;
+  }
+
+  for(auto item : out_uris) {
+    MetaMessage* out = new MetaMessage();
+    out->setUri(item);
+    out->setMetadata(msg->getMetadata());
+
+    std::string contentType = msg->getContentType();
+    if(contentType == "") {
+      contentType = discoverContentType(msg->getContentData());
+      FIFU_LOG_WARN("(Core) Detected content type (" + contentType +") of " + msg->getUri());
     }
 
-    for(auto item : out_uris) {
-      MetaMessage* out = new MetaMessage();
-      out->setUri(item);
-      out->setMetadata(msg->getMetadata());
+    boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(contentType);
+    if(converter) {
+      // Extract existent URIs and create mappings to other architectures
+      std::map<std::string, std::string> uris;
+      uris = converter->extractUrisFromContent(msg->getUri(), msg->getContentData());
 
-      std::string contentType = msg->getContentType();
-      if(contentType == "") {
-        contentType = discoverContentType(msg->getContentData());
-        FIFU_LOG_WARN("(Core) Detected content type (" + contentType +") of " + msg->getUri());
-      }
+      std::map<std::string, std::string> mappings_for_convertion;
+      for(auto& o_uri : uris) {
+        std::vector<std::string> f_uris = createMapping(o_uri.second);
 
-      boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(contentType);
-      if(converter) {
-        // Extract existent URIs and create mappings to other architectures
-        std::map<std::string, std::string> uris;
-        uris = converter->extractUrisFromContent(msg->getUri(), msg->getContentData());
-
-        std::map<std::string, std::string> mappings_for_convertion;
-        for(auto& o_uri : uris) {
-          std::vector<std::string> f_uris = createMapping(o_uri.second);
-
-          for(auto& f_uri : f_uris) {
-            if(f_uri.find(out->getUri().substr(0, out->getUri().find("://"))) != std::string::npos) {
-              mappings_for_convertion.emplace(o_uri.first, f_uri);
-              break;
-            }
+        for(auto& f_uri : f_uris) {
+          if(f_uri.find(out->getUri().substr(0, out->getUri().find("://"))) != std::string::npos) {
+            mappings_for_convertion.emplace(o_uri.first, f_uri);
+            break;
           }
         }
-
-        out->setContent(contentType,
-                        converter->convertContent(msg->getContentData(),
-                                                  mappings_for_convertion));
-      } else {
-        // If no converter is found send the content without conversion
-        out->setContent(contentType, msg->getContentData());
       }
 
-      // Send message to destination network architecture
-      pm.getProtocolPlugin(out->getUri().substr(0, out->getUri().find("://")))->sendMessage(out);
+      out->setContent(contentType,
+                      converter->convertContent(msg->getContentData(),
+                                                mappings_for_convertion));
+    } else {
+      // If no converter is found send the content without conversion
+      out->setContent(contentType, msg->getContentData());
     }
 
-    // Release the kraken
-    delete msg;
+    // Send message to destination network architecture
+    pm.getProtocolPlugin(out->getUri().substr(0, out->getUri().find("://")))->sendMessage(out);
+  }
+
+  // Release the kraken
+  delete msg;
 }
