@@ -21,11 +21,11 @@
 #include "plugin-converter.hpp"
 
 #include <dlfcn.h>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 class PluginConverterFactory {
 public:
-  static const boost::shared_ptr<PluginConverter> createPlugin(const std::string path)
+  static const std::shared_ptr<PluginConverter> createPlugin(const std::string path)
   {
     void* handle = dlopen(path.c_str(), RTLD_LAZY);
 
@@ -33,7 +33,7 @@ public:
       = (PluginConverter* (*)()) dlsym(handle, "create_plugin_object");
     PluginConverter* plugin = create();
 
-    return boost::shared_ptr<PluginConverter>(plugin);
+    return std::shared_ptr<PluginConverter>(plugin);
   }
 };
 

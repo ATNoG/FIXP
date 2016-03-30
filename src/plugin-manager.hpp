@@ -24,15 +24,15 @@
 #include "thread-pool.hpp"
 
 #include <map>
+#include <memory>
 #include <thread>
 #include <vector>
-#include <boost/shared_ptr.hpp>
 
 class PluginManager
 {
 private:
-  std::map<std::string, boost::shared_ptr<PluginProtocol> > _protocols;
-  std::map<std::string, boost::shared_ptr<PluginConverter> > _converters;
+  std::map<std::string, std::shared_ptr<PluginProtocol> > _protocols;
+  std::map<std::string, std::shared_ptr<PluginConverter> > _converters;
 
 public:
   PluginManager()
@@ -62,8 +62,8 @@ public:
   void loadConverter(const std::string path);
 
   std::vector<std::string> installMapping(const std::string uri);
-  boost::shared_ptr<PluginProtocol> getProtocolPlugin(const std::string protocol);
-  boost::shared_ptr<PluginConverter> getConverterPlugin(const std::string fileType);
+  std::shared_ptr<PluginProtocol> getProtocolPlugin(const std::string protocol);
+  std::shared_ptr<PluginConverter> getConverterPlugin(const std::string fileType);
 };
 
 #endif /* PLUGIN_MANAGER__HPP_ */

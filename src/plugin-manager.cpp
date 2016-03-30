@@ -51,7 +51,7 @@ void PluginManager::loadProtocol(const std::string path,
   }
 
   // Create protocol plugin
-  boost::shared_ptr<PluginProtocol> protocol
+  std::shared_ptr<PluginProtocol> protocol
          = PluginProtocolFactory::createPlugin(path, queue, tp);
   _protocols.emplace(std::piecewise_construct,
                      std::forward_as_tuple(protocol->getProtocol()),
@@ -69,7 +69,7 @@ void PluginManager::loadConverter(const std::string path)
   }
 
   // Create converter plugin
-  boost::shared_ptr<PluginConverter> converter
+  std::shared_ptr<PluginConverter> converter
          = PluginConverterFactory::createPlugin(path);
   for(auto& item : converter->getFileTypes()) {
     _converters.emplace(std::piecewise_construct,
@@ -91,16 +91,16 @@ std::vector<std::string> PluginManager::installMapping(const std::string uri)
   return ret;
 }
 
-boost::shared_ptr<PluginProtocol> PluginManager::getProtocolPlugin(const std::string protocol)
+std::shared_ptr<PluginProtocol> PluginManager::getProtocolPlugin(const std::string protocol)
 {
   return _protocols.find(protocol)->second;
 }
 
-boost::shared_ptr<PluginConverter> PluginManager::getConverterPlugin(const std::string fileType)
+std::shared_ptr<PluginConverter> PluginManager::getConverterPlugin(const std::string fileType)
 {
   if(_converters.find(fileType) != _converters.end()) {
     return _converters.find(fileType)->second;
   } else {
-    return boost::shared_ptr<PluginConverter>();
+    return std::shared_ptr<PluginConverter>();
   }
 }

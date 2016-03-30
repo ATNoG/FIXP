@@ -20,6 +20,7 @@
 #include "utils.hpp"
 
 #include <iostream>
+#include <memory>
 
 void Core::loadProtocol(const std::string path)
 {
@@ -144,7 +145,7 @@ void Core::processMessage(const MetaMessage* msg)
       FIFU_LOG_WARN("(Core) Detected content type (" + contentType +") of " + msg->getUri());
     }
 
-    boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(contentType);
+    std::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(contentType);
     if(converter) {
       // Extract existent URIs and create mappings to other architectures
       std::map<std::string, std::string> uris;

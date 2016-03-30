@@ -21,13 +21,12 @@
 #include "plugin.hpp"
 
 #include <dlfcn.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/smart_ptr/make_shared.hpp>
+#include <memory>
 
 class PluginFactory {
 public:
 
-  static const boost::shared_ptr<Plugin> createPlugin(const std::string path_to_plugin)
+  static const std::shared_ptr<Plugin> createPlugin(const std::string path_to_plugin)
   {
     void* handle = dlopen(path_to_plugin.c_str(), RTLD_LAZY);
 
@@ -35,7 +34,7 @@ public:
     create = (Plugin* (*)())dlsym(handle, "create_plugin_object");
     Plugin* teste = (Plugin*) create();
 
-    return boost::shared_ptr<Plugin>(teste);
+    return std::shared_ptr<Plugin>(teste);
   }
 };
 

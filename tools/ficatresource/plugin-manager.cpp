@@ -18,9 +18,7 @@
 #include "plugin-manager.hpp"
 #include "plugin-factory.hpp"
 
-#include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/smart_ptr/make_shared.hpp>
 
 void PluginManager::loadPlugins(const std::string path_to_plugins)
 {
@@ -35,7 +33,7 @@ void PluginManager::loadPlugins(const std::string path_to_plugins)
       ++it) {
     if(boost::filesystem::is_regular_file(it->path())) {
       // Create plugin and map it with the correspondent schema
-      boost::shared_ptr<Plugin> plugin
+      std::shared_ptr<Plugin> plugin
                             = PluginFactory::createPlugin(it->path().string());
       _plugins.emplace(std::piecewise_construct,
                        std::forward_as_tuple(plugin->getSchema()),
@@ -49,7 +47,7 @@ void PluginManager::forwardUriToPlugin(const std::string uri) const
   std::string schema = uri.substr(0, uri.find("://"));
 
   try {
-    boost::shared_ptr<Plugin> plugin = _plugins.at(schema);
+    std::shared_ptr<Plugin> plugin = _plugins.at(schema);
     plugin->processUri(uri);
   } catch(std::out_of_range& e) {
     std::cerr << "Error: schema not support!" << std::endl << std::flush;

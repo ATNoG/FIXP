@@ -22,13 +22,13 @@
 #include "concurrent-blocking-queue.hpp"
 
 #include <dlfcn.h>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 class PluginProtocolFactory {
 public:
-  static const boost::shared_ptr<PluginProtocol> createPlugin(const std::string path,
-                                                              ConcurrentBlockingQueue<const MetaMessage*>& queue,
-                                                              ThreadPool& tp)
+  static const std::shared_ptr<PluginProtocol> createPlugin(const std::string path,
+                                                            ConcurrentBlockingQueue<const MetaMessage*>& queue,
+                                                            ThreadPool& tp)
   {
     void* handle = dlopen(path.c_str(), RTLD_LAZY);
     PluginProtocol* (*create)(ConcurrentBlockingQueue<const MetaMessage*>&,
@@ -37,7 +37,7 @@ public:
                              ThreadPool&)) dlsym(handle, "create_plugin_object");
     PluginProtocol* plugin = create(queue, tp);
 
-    return boost::shared_ptr<PluginProtocol>(plugin);
+    return std::shared_ptr<PluginProtocol>(plugin);
   }
 };
 

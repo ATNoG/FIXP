@@ -21,12 +21,12 @@
 #include "plugin.hpp"
 
 #include <map>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 class PluginManager
 {
 private:
-  std::map<std::string, boost::shared_ptr<Plugin> > _plugins;
+  std::map<std::string, std::shared_ptr<Plugin> > _plugins;
 
 public:
   PluginManager() { };
