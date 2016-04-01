@@ -23,9 +23,9 @@ CC=gcc
 CXX=g++
 RM=rm
 CFLAGS=
-CPPFLAGS=-I$(INCLUDE_DIR) -std=c++11 -DBOOST_LOG_DYN_LINK -fPIC
+CPPFLAGS=-I$(INCLUDE_DIR) -std=c++11 -fPIC
 LDFLAGS=-shared
-LDLIBS=-lboost_log
+LDLIBS=
 
 SOURCES=$(wildcard $(SRC_DIR)/*.cpp)
 OBJS=$(SOURCES:.cpp=.o)

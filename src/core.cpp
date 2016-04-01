@@ -17,7 +17,7 @@
 
 #include "core.hpp"
 
-#include <boost/log/trivial.hpp>
+#include <iostream>
 
 void Core::loadProtocol(std::string path)
 {
@@ -37,9 +37,10 @@ void Core::createMapping(std::string uri)
   std::vector<std::string> f_uris = pm.installMapping(uri);
   for(auto f_uri : f_uris) {
     //FIXME: handle empty strings
-    BOOST_LOG_TRIVIAL(info) << "[FIXP (Core)]" << std::endl
-                            << " - New mapping: " << f_uri << " -> "
-                            << uri << std::endl;
+    std::cout << "[FIXP (Core)]" << std::endl
+              << " - New mapping: " << f_uri << " -> "
+              << uri << std::endl;
+
     _mappings.emplace(uri, f_uri);
     _mappings.emplace(f_uri, uri);
   }
@@ -65,9 +66,9 @@ void Core::start()
       return;
     }
 
-    BOOST_LOG_TRIVIAL(trace) << "[FIXP (Core)]" << std::endl
-                             << " - Processing next message in the queue ("
-                             << in->_uri << ")" << std::endl;
+    std::cout << "[FIXP (Core)]" << std::endl
+              << " - Processing next message in the queue ("
+              << in->_uri << ")" << std::endl;
 
     // Schedule message processing
     std::function<void()> func(std::bind(&Core::processMessage, this, in));
@@ -82,9 +83,9 @@ void Core::processMessage(MetaMessage* msg)
     if((it = _mappings.find(msg->_uri)) != _mappings.end()) {
       out->_uri = it->second;
     } else {
-      BOOST_LOG_TRIVIAL(warning) << "[FIXP (Core)]" << std::endl
-                                 << " - Mapping for " << msg->_uri
-                                 << " not found" << std::endl;
+      std::cout << "[FIXP (Core)]" << std::endl
+                << " - Mapping for " << msg->_uri
+                << " not found" << std::endl;
       return;
     }
 

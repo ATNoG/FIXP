@@ -17,8 +17,6 @@
 
 #include "pursuit-to-http.hpp"
 
-#include <boost/log/trivial.hpp>
-
 extern "C" PursuitToHttpConverter* create_plugin_object()
 {
   return new PursuitToHttpConverter();

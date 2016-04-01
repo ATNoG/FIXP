@@ -19,9 +19,9 @@
 #include "plugin-protocol-factory.hpp"
 #include "plugin-converter-factory.hpp"
 
+#include <iostream>
 #include <thread>
 #include <boost/filesystem.hpp>
-#include <boost/log/trivial.hpp>
 
 ///////////////////////////////////////////////////////////////////////////////
 std::string extractSchema(std::string uri)
@@ -54,14 +54,14 @@ void PluginManager::loadProtocol(std::string path,
   _protocols.emplace(std::piecewise_construct,
                      std::forward_as_tuple(protocol->getProtocol()),
                      std::forward_as_tuple(protocol));
-  BOOST_LOG_TRIVIAL(info) << "[FIXP (PM)]" << std::endl
-                          << " - Loading " << protocol->getProtocol()
-                          << " protocol...done!" << std::endl;
+  std::cout << "[FIXP (PM)]" << std::endl
+            << " - Loading " << protocol->getProtocol()
+            << " protocol...done!" << std::endl;
 
   protocol->start();
-  BOOST_LOG_TRIVIAL(info) << "[FIXP (PM)]" << std::endl
-                          << " - Starting " << protocol->getProtocol()
-                          << " protocol...done!" << std::endl;
+  std::cout << "[FIXP (PM)]" << std::endl
+            << " - Starting " << protocol->getProtocol()
+            << " protocol...done!" << std::endl;
 }
 
 void PluginManager::loadConverter(std::string path)
@@ -78,9 +78,9 @@ void PluginManager::loadConverter(std::string path)
   _converters.emplace(std::piecewise_construct,
                       std::forward_as_tuple(converter->getProtocolConvertion()),
                       std::forward_as_tuple(converter));
-  BOOST_LOG_TRIVIAL(info) << "[FIXP (PM)]" << std::endl
-                          << " - Loading " << converter->getProtocolConvertion()
-                          << " converter...done!" << std::endl;
+  std::cout << "[FIXP (PM)]" << std::endl
+            << " - Loading " << converter->getProtocolConvertion()
+            << " converter...done!" << std::endl;
 }
 
 std::vector<std::string> PluginManager::installMapping(std::string uri)

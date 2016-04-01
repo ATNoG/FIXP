@@ -17,7 +17,7 @@
 
 #include "http-to-pursuit.hpp"
 
-#include <boost/log/trivial.hpp>
+#include <iostream>
 #include <regex>
 
 extern "C" HttpToPursuitConverter* create_plugin_object()
@@ -39,9 +39,9 @@ HttpToPursuitConverter::extractUrisFrom(MetaMessage& in)
   std::smatch match;
   std::regex expression("(href|src)=\"(.*?)\"");
   while(std::regex_search(content, match, expression)) {
-    BOOST_LOG_TRIVIAL(trace) << "[HTTP-to-PURSUIT Converter Plugin]" << std::endl
-                             << " - Found URI in content: " << match[2].str()
-                             << std::endl;
+    std::cout << "[HTTP-to-PURSUIT Converter Plugin]" << std::endl
+              << " - Found URI in content: " << match[2].str()
+              << std::endl;
     ret.push_back(match[2].str());
 
     content = match.suffix().str();
