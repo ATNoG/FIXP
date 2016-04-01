@@ -35,10 +35,13 @@ all: $(TARGET)
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-http-to-pursuit.so: $(SRC_DIR)/http-to-pursuit.cpp $(BUILD_DIR)
+$(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CXX) $(CPPFLAGS) -c $< -o $@
+
+http-to-pursuit.so: $(SRC_DIR)/http-to-pursuit.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
 
-http-to-ndn.so: $(SRC_DIR)/http-to-ndn.cpp $(BUILD_DIR)
+http-to-ndn.so: $(SRC_DIR)/http-to-ndn.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
 
 clean:

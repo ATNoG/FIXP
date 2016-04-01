@@ -38,13 +38,16 @@ all: $(TARGET)
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-plugin-example.so: $(SRC_DIR)/plugin-example.cpp $(BUILD_DIR)
+$(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CXX) $(CPPFLAGS) -c $< -o $@
+
+plugin-example.so: $(SRC_DIR)/plugin-example.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
 
-plugin-ndn.so: $(SRC_DIR)/plugin-ndn.cpp $(BUILD_DIR)
+plugin-ndn.so: $(SRC_DIR)/plugin-ndn.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(NDNCXXFLAGS) $(LDFLAGS) $(NDNLDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
 
-plugin-pursuit.so: $(SRC_DIR)/plugin-pursuit.cpp $(BUILD_DIR)
+plugin-pursuit.so: $(SRC_DIR)/plugin-pursuit.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -pthread -lblackadder
 
 clean:

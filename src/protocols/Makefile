@@ -38,13 +38,16 @@ all: $(TARGET)
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-pursuit-protocol.so: $(SRC_DIR)/pursuit-protocol.cpp $(BUILD_DIR)
+$(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CXX) $(CPPFLAGS) -c $< -o $@
+
+pursuit-protocol.so: $(SRC_DIR)/pursuit-protocol.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -lblackadder -lcryptopp
 
-ndn-protocol.so: $(SRC_DIR)/ndn-protocol.cpp $(BUILD_DIR)
+ndn-protocol.so: $(SRC_DIR)/ndn-protocol.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(NDNCXXFLAGS) $(LDFLAGS) $(NDNLDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
 
-http-protocol.so: $(SRC_DIR)/http-protocol.cpp $(BUILD_DIR)
+http-protocol.so: $(SRC_DIR)/http-protocol.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -lcurl
 
 clean:
