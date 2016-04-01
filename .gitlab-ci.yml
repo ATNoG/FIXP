@@ -1,10 +1,5 @@
 image: debian:jessie
 
-cache:
-  key: "FIFu"
-  paths:
-    - cache
-
 before_script:
   - ./install_requirements.sh
 

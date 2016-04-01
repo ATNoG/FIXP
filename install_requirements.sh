@@ -1,23 +1,23 @@
 #/bin/bash
 
 CWD=`pwd`
-mkdir -p $CWD/cache
+mkdir -p /cache
 
 #Update
 apt-get update -qq
 
 #Install build tools 
 #TODO: install just the required packages
-apt-get install -o dir::cache::archives="$CWD/cache/apt" -y build-essential && \
-apt-get install -o dir::cache::archives="$CWD/cache/apt" -y git && \
-apt-get install -o dir::cache::archives="$CWD/cache/apt" -y libboost-all-dev && \
+apt-get install -o dir::cache::archives="/cache/apt" -y build-essential && \
+apt-get install -o dir::cache::archives="/cache/apt" -y git && \
+apt-get install -o dir::cache::archives="/cache/apt" -y libboost-all-dev && \
 
 #Install FIFu library requirements
-apt-get install -o dir::cache::archives="$CWD/cache/apt" -y libcrypto++-dev libcurl4-gnutls-dev
+apt-get install -o dir::cache::archives="/cache/apt" -y libcrypto++-dev libcurl4-gnutls-dev
 
 #Install Click
-CLICK_DIR=$CWD/cache/click
-apt-get install -o dir::cache::archives="$CWD/cache/apt" -y tcpdump libpcap-dev time
+CLICK_DIR=/cache/click
+apt-get install -o dir::cache::archives="/cache/apt" -y tcpdump libpcap-dev time
 if [ ! -d "$CLICK_DIR" ]; then
   echo "Cloning repository"
   git clone https://github.com/kohler/click.git $CLICK_DIR && \
@@ -35,8 +35,8 @@ if [ ! $rc -eq 0 ]; then
 fi
 
 #Install Blackadder
-BLACKADDER_DIR=$CWD/cache/blackadder
-apt-get install -o dir::cache::archives="$CWD/cache/apt" -y \
+BLACKADDER_DIR=/cache/blackadder
+apt-get install -o dir::cache::archives="/cache/apt" -y \
 	libtool autoconf automake libigraph0 libigraph0-dev libconfig++8 libconfig++8-dev libtclap-dev libboost-graph-dev && \
 if [ ! -d "$BLACKADDER_DIR" ]; then
   echo "Cloning repository"
@@ -59,4 +59,4 @@ rc=$?
 if [ ! $rc -eq 0 ]; then
   exit $rc
 fi
-cd $CWD
+cd $CWD 
