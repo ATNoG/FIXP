@@ -26,7 +26,7 @@ RM=rm
 CFLAGS=
 CPPFLAGS=-I$(INCLUDE_DIR) -std=c++14
 LDFLAGS=
-LDLIBS=-ldl -lboost_program_options
+LDLIBS=-ldl
 
 SOURCES=$(wildcard $(SRC_DIR)/*.cpp)
 OBJS=$(SOURCES:.cpp=.o)

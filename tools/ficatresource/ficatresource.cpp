@@ -17,51 +17,106 @@
 
 #include "plugin-manager.hpp"
 
+#include <argp.h>
 #include <iostream>
-#include <boost/program_options.hpp>
 
-#define USAGE "ficatresource [OPTIONS] --uri <uri>"
+#define USAGE "ficatresource -p <path_to_protocols> -uri <uri_to_request>"
 
-int main (int argc, char* argv[])
+struct Options
 {
-  std::string uri;
-  std::string path_to_plugins;
+  const char* path_to_protocols;
+  const char* uri_to_request;
+  bool usage;
+};
 
-  boost::program_options::options_description desc("Options");
-  boost::program_options::variables_map vm;
-  try {
-    desc.add_options()
-      ("uri,u", boost::program_options::value<std::string>(&uri)->required(),
-                "Resource URI")
-      ("plugins,p", boost::program_options::value<std::string>(&path_to_plugins)->required(),
-                "Path to protocol plugins")
-      ("help,h", "Display configuration options");
+struct argp_option program_options[] = {
+    {"plugins",  'p', "PATH", 0,
+       "Path to protocol endpoint plugins folder", 0},
+    {"uri",      'u', "URI",  0,
+       "URI of the resource to request",           0},
+    {"usage",      -1,  "",   OPTION_HIDDEN | OPTION_ARG_OPTIONAL,
+       "Print an usage example message",           0},
+    {0}
+  };
 
-    boost::program_options::store(boost::program_options::parse_command_line(argc,
-                                                                             argv,
-                                                                             desc),
-                                  vm);
-    boost::program_options::notify(vm);
+error_t parse_opt(int key, char* arg, struct argp_state *state)
+{
+  struct Options *options = (Options*) state->input;
+  switch(key) {
+    case -1: {
+      options->usage = true;
+    } break;
 
-    if (vm.count("help")) {
-      std::cout << USAGE << std::endl << desc << std::endl << std::flush;
-      return 0;
-    }
-  } catch(std::exception& e) {
-    if (vm.count("help")) {
-      std::cout << USAGE << std::endl << desc << std::endl << std::flush;
-      return 0;
-    } else {
-      std::cout << USAGE << std::endl << desc << std::endl;
-      std::cerr << "Error: " << e.what() << std::endl << std::flush;
-      return 1;
+    case 'p': {
+      options->path_to_protocols = arg;
+    } break;
+
+    case 'u': {
+      options->uri_to_request = arg;
+    } break;
+
+    default: {
+      return ARGP_ERR_UNKNOWN;
     }
   }
 
-  PluginManager pm;
-  pm.loadPlugins(path_to_plugins);
+  return 0;
+}
 
-  pm.forwardUriToPlugin(uri);
+int parseCmdOptions(int& argc, char**& argv,
+                    const char*& path_to_protocols,
+                    const char*& uri_to_request)
+{
+  struct Options options;
+
+  // Default option values
+  options.path_to_protocols = NULL;
+  options.uri_to_request = NULL;
+  options.usage = false;
+
+  struct argp argp = { program_options, parse_opt, "", "OPTION:" };
+  argp_parse(&argp, argc, argv, 0, 0, &options);
+
+  if(options.usage) {
+    std::cout << USAGE << std::endl << std::flush;
+    return -1;
+  }
+
+  path_to_protocols = options.path_to_protocols;
+  if(path_to_protocols == NULL) {
+    std::cout << "Missing mandatory argument ( -p, --protocols=PATH )"
+              << std::endl << std::flush;
+    argp_help(&argp, stdout, ARGP_HELP_STD_ERR, "");
+    return -1;
+  }
+
+  uri_to_request = options.uri_to_request;
+  if(uri_to_request == NULL) {
+    std::cout << "Missing mandatory argument ( -u, --uri=URI )"
+              << std::endl << std::flush;
+    argp_help(&argp, stdout, ARGP_HELP_STD_ERR, "");
+    return -1;
+  }
+
+  return 0;
+}
+
+int main (int argc, char* argv[])
+{
+  const char* path_to_protocols;
+  const char* uri_to_request;
+
+  int ret = parseCmdOptions(argc, argv,
+                            path_to_protocols, uri_to_request);
+
+  if(ret != 0) {
+    return ret;
+  }
+
+  PluginManager pm;
+  pm.loadPlugins(path_to_protocols);
+
+  pm.forwardUriToPlugin(uri_to_request);
 
   return 0;
 }

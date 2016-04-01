@@ -19,11 +19,12 @@
 #include "logger.hpp"
 #include "thread-pool.hpp"
 
+#include <algorithm>
+#include <argp.h>
 #include <dirent.h>
 #include <iostream>
 #include <fstream>
 #include <signal.h>
-#include <boost/program_options.hpp>
 
 #define USAGE "Usage: fixp [OPTIONS] -r <resource file> " \
               "-p <path_to_protocols> -c <path_to_converters> "
@@ -96,51 +97,137 @@ void load_resources(Core& core, std::string path)
   file.close();
 }
 
+struct Options
+{
+  const char* path_to_resources;
+  const char* path_to_protocols;
+  const char* path_to_converters;
+  int numWorkers;
+  unsigned short verbosity;
+  bool usage;
+};
+
+struct argp_option program_options[] = {
+    {"resources",  'r', "PATH",  0,
+       "Path to file containing the URI of known resources",       0},
+    {"protocols",  'p', "PATH",  0,
+       "Path to protocol endpoint plugins folder",                 0},
+    {"converters", 'c', "PATH",  0,
+       "Path to content endpoint plugins folder",                  0},
+    {"workers",    'w', "VALUE", 0,
+       "Number of conversions that can be handled simultaneously", 0},
+    {"verbose",    'v', "VALUE", 0,
+       "Produce verbose output",                                   0},
+    {"usage",      -1,  "",      OPTION_HIDDEN | OPTION_ARG_OPTIONAL,
+       "Print an usage example message", 0},
+    {0}
+  };
+
+error_t parse_opt(int key, char* arg, struct argp_state *state)
+{
+  struct Options *options = (Options*) state->input;
+  switch(key) {
+    case -1: {
+      options->usage = true;
+    } break;
+
+    case 'c': {
+      options->path_to_converters = arg;
+    } break;
+
+    case 'p': {
+      options->path_to_protocols = arg;
+    } break;
+
+    case 'r': {
+      options->path_to_resources = arg;
+    } break;
+
+    case 'v': {
+      options->verbosity = atoi(arg);
+    } break;
+
+    case 'w': {
+      options->numWorkers = atoi(arg);
+    } break;
+
+    default: {
+      return ARGP_ERR_UNKNOWN;
+    }
+  }
+
+  return 0;
+}
+
+int parseCmdOptions(int& argc, char**& argv,
+                    const char*& path_to_resources,
+                    const char*& path_to_protocols,
+                    const char*& path_to_converters,
+                    int& numWorkers, unsigned short& verbosity)
+{
+  struct Options options;
+
+  // Default option values
+  options.path_to_resources = NULL;
+  options.path_to_protocols = NULL;
+  options.path_to_converters = NULL;
+  options.numWorkers = -1;
+  options.verbosity = 3;
+  options.usage = false;
+
+  struct argp argp = { program_options, parse_opt, "", "OPTION:" };
+  argp_parse(&argp, argc, argv, 0, 0, &options);
+
+  if(options.usage) {
+    std::cout << USAGE << std::endl << std::flush;
+    return -1;
+  }
+
+  path_to_resources = options.path_to_resources;
+  if(path_to_resources == NULL) {
+    std::cout << "Missing mandatory argument ( -r, --resources=PATH )"
+              << std::endl << std::flush;
+    argp_help(&argp, stdout, ARGP_HELP_STD_ERR, "");
+    return -1;
+  }
+
+  path_to_protocols = options.path_to_protocols;
+  if(path_to_protocols == NULL) {
+    std::cout << "Missing mandatory argument ( -p, --protocols=PATH )"
+              << std::endl << std::flush;
+    argp_help(&argp, stdout, ARGP_HELP_STD_ERR, "");
+    return -1;
+  }
+
+  path_to_converters = options.path_to_converters;
+  if(path_to_converters == NULL) {
+    std::cout << "Missing mandatory argument ( -c, --converters=PATH )"
+              << std::endl << std::flush;
+    argp_help(&argp, stdout, ARGP_HELP_STD_ERR, "");
+    return -1;
+  }
+
+  verbosity = options.verbosity;
+
+  return 0;
+}
+
 int main(int argc, char* argv[])
 {
   signal(SIGINT, signalHandler);
 
-  std::string path_to_resources;
-  std::string path_to_protocols;
-  std::string path_to_converters;
+  const char* path_to_resources;
+  const char* path_to_protocols;
+  const char* path_to_converters;
   int numWorkers;
   unsigned short verbosity;
 
-  boost::program_options::options_description desc("Options");
-  boost::program_options::variables_map vm;
-  try {
-    desc.add_options()
-      ("resources,r", boost::program_options::value<std::string>(&path_to_resources)->required(),
-                "Path to file containing known resource URIs")
-      ("protocols,p", boost::program_options::value<std::string>(&path_to_protocols)->required(),
-                "Path to protocol endpoint plugins")
-      ("converters,c", boost::program_options::value<std::string>(&path_to_converters)->required(),
-                "Path to protocol convertion plugins")
-      ("workers,w", boost::program_options::value<int>(&numWorkers)->default_value(-1),
-                "Number of conversions that can be handle simultaneously")
-      ("verbose,v", boost::program_options::value<unsigned short>(&verbosity)->default_value(3),
-                "Produce verbose output")
-      ("help,h", "Display configuration options");
+  int ret = parseCmdOptions(argc, argv,
+                            path_to_resources, path_to_protocols,
+                            path_to_converters, numWorkers, verbosity);
 
-    boost::program_options::store(boost::program_options::parse_command_line(argc,
-                                                                             argv,
-                                                                             desc),
-                                  vm);
-    boost::program_options::notify(vm);
-
-    if (vm.count("help")) {
-      std::cout << USAGE << std::endl << desc << std::endl << std::flush;
-      return 0;
-    }
-  } catch(std::exception& e) {
-    if (vm.count("help")) {
-      std::cout << USAGE << std::endl << desc << std::endl << std::flush;
-      return 0;
-    } else {
-      std::cout << USAGE << std::endl << desc << std::endl;
-      std::cout << "Error: " << e.what() << std::endl << std::flush;
-      return 1;
-    }
+  if(ret != 0) {
+    return ret;
   }
 
   loadLogger(verbosity);
