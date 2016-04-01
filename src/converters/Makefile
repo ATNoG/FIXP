@@ -14,7 +14,7 @@
 ##  You should have received a copy of the GNU General Public License
 ##  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-TARGET=http-to-pursuit.so http-to-ndn.so
+TARGET=html-converter.so
 SRC_DIR=.
 INCLUDE_DIR=../../include
 BUILD_DIR=../../dist/fixp-converters
@@ -38,10 +38,7 @@ $(BUILD_DIR):
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CPPFLAGS) -c $< -o $@
 
-http-to-pursuit.so: $(SRC_DIR)/http-to-pursuit.o $(BUILD_DIR)
-	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
-
-http-to-ndn.so: $(SRC_DIR)/http-to-ndn.o $(BUILD_DIR)
+html-converter.so: $(SRC_DIR)/html-converter.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
 
 clean:

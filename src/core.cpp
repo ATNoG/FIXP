@@ -121,23 +121,31 @@ void Core::processMessage(MetaMessage* msg)
       out->_uri = item;
 
       // Extract existent URIs and create mappings to other architectures
-      boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(msg->_uri, out->_uri);
+      boost::shared_ptr<PluginConverter> converter = pm.getConverterPlugin("html"); //FIXME
       if(converter) {
-        std::vector<std::string> uris;
-        uris = converter->extractUrisFrom(*msg);
+        std::map<std::string, std::string> uris;
+        uris = converter->extractUrisFromContent(msg->_uri, msg->_contentPayload);
 
-        for(auto item : uris) {
-          // Use absolute URIs
-          std::string o_uri = item;
-          if(item.find("://") == std::string::npos) {
-            o_uri = converter->uriToAbsoluteForm(item, msg->_uri);
-          }
+        std::map<std::string, std::string> mappings_;
+        for(auto& item : uris) {
+          std::cout << "Here\n" << std::flush;
+          createMapping(item.second);
 
-         createMapping(o_uri);
+          // Adapt URIs in the content to cope with the destination architecture
+          std::map<std::string, std::string>::iterator it = std::find_if(_mappings.begin(),
+                                                                         _mappings.end(),
+                                                                         [=](std::pair<std::string, std::string> it) {
+                                                                           if(it.second.compare(item.second) == 0
+                                                                              && it.first.find(out->_uri.substr(0, out->_uri.find("://"))) != std::string::npos) {
+                                                                             return true;
+                                                                           } else {
+                                                                             return false;
+                                                                           }
+                                                                         });
+
+          mappings_.emplace(item.first, it->first);
+          out->_contentPayload = converter->convertContent(msg->_contentPayload, mappings_);
         }
-
-        // Adapt URIs in the content to cope with the destination architecture
-        out->_contentPayload = converter->convertContent(*msg, uris, _mappings);
       } else {
         // If no converter is found send the content without conversion
         out->_contentPayload = msg->_contentPayload;

@@ -29,10 +29,10 @@ public:
   PluginConverter() { };
   ~PluginConverter() { };
 
-  virtual std::string getProtocolConvertion() = 0;
-  virtual std::vector<std::string> extractUrisFrom(MetaMessage& in) = 0;
+  virtual std::string getFileType() = 0;
+  virtual std::map<std::string, std::string> extractUrisFromContent(std::string uri, std::string& content) = 0;
   virtual std::string uriToAbsoluteForm(std::string uri, std::string parent) = 0;
-  virtual std::string convertContent(MetaMessage& in, std::vector<std::string>& uris, std::map<std::string, std::string>& mappings) = 0;
+  virtual std::string convertContent(std::string& content, std::map<std::string, std::string>& mappings) = 0;
 };
 
 #endif /* PLUGIN_CONVERTER__HPP_ */

@@ -76,10 +76,10 @@ void PluginManager::loadConverter(std::string path)
   boost::shared_ptr<PluginConverter> converter
          = PluginConverterFactory::createPlugin(path);
   _converters.emplace(std::piecewise_construct,
-                      std::forward_as_tuple(converter->getProtocolConvertion()),
+                      std::forward_as_tuple(converter->getFileType()),
                       std::forward_as_tuple(converter));
   std::cout << "[FIXP (PM)]" << std::endl
-            << " - Loading " << converter->getProtocolConvertion()
+            << " - Loading " << converter->getFileType()
             << " converter...done!" << std::endl;
 }
 
@@ -100,11 +100,10 @@ boost::shared_ptr<PluginProtocol> PluginManager::getProtocolPlugin(std::string p
   return _protocols.find(protocol)->second;
 }
 
-boost::shared_ptr<PluginConverter> PluginManager::getConverterPlugin(std::string o_uri, std::string f_uri)
+boost::shared_ptr<PluginConverter> PluginManager::getConverterPlugin(std::string fileType)
 {
-  std::string converter = extractSchema(o_uri) + "-to-" + extractSchema(f_uri);
-  if(_converters.find(converter) != _converters.end()) {
-    return _converters.find(converter)->second;
+  if(_converters.find(fileType) != _converters.end()) {
+    return _converters.find(fileType)->second;
   } else {
     return boost::shared_ptr<PluginConverter>();
   }

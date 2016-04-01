@@ -1,4 +1,4 @@
-/** Brief: HTTP to FP7 PURSUIT converter plugin
+/** Brief: HTML converter plugin
  *  Copyright (C) 2016  Carlos Guimaraes <cguimaraes@av.it.pt>
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -15,32 +15,24 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HTTP_TO_PURSUIT_CONVERTER__HPP_
-#define HTTP_TO_PURSUIT_CONVERTER__HPP_
+#ifndef HTML_CONVERTER__HPP_
+#define HTML_CONVERTER__HPP_
 
 #include "../plugin-converter.hpp"
 
-#include <blackadder.hpp>
+#define SCHEMA_DELIMITER "://"
 
-#define HTTP_SCHEMA "http://"
-#define PURSUIT_SCHEMA "pursuit://"
-
-#define PURSUIT_ID_LEN_HEX_FORMAT 2 * PURSUIT_ID_LEN
-#define DEFAULT_SCOPE "0000000000000000"
-
-class HttpToPursuitConverter : public PluginConverter
+class HtmlConverter : public PluginConverter
 {
 public:
-  HttpToPursuitConverter() { };
+  HtmlConverter() { };
+  ~HtmlConverter() { };
 
-  ~HttpToPursuitConverter() { };
-
-  std::string getProtocolConvertion() { return "http-to-pursuit"; };
-  std::vector<std::string> extractUrisFrom(MetaMessage& in);
+  std::string getFileType() { return "html"; };
+  std::map<std::string, std::string> extractUrisFromContent(std::string uri, std::string& content);
   std::string uriToAbsoluteForm(std::string uri, std::string parent);
-  std::string convertContent(MetaMessage& in, std::vector<std::string>& uris, std::map<std::string, std::string>& mappings);
-
+  std::string convertContent(std::string& content, std::map<std::string, std::string>& mappings);
 };
 
-#endif /* HTTP_TO_PURSUIT_CONVERTER__HPP_ */
+#endif /* HTML_CONVERTER__HPP_ */
 

@@ -63,7 +63,7 @@ public:
 
   std::vector<std::string> installMapping(std::string uri);
   boost::shared_ptr<PluginProtocol> getProtocolPlugin(std::string protocol);
-  boost::shared_ptr<PluginConverter> getConverterPlugin(std::string o_uri, std::string f_uri);
+  boost::shared_ptr<PluginConverter> getConverterPlugin(std::string fileType);
 };
 
 #endif /* PLUGIN_MANAGER__HPP_ */
