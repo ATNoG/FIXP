@@ -30,6 +30,7 @@
 #include <ndn-cxx/security/key-chain.hpp>
 
 #define SCHEMA "ndn://"
+#define DEFAULT_PREFIX "fifu"
 
 using namespace ndn;
 
@@ -59,8 +60,13 @@ protected:
 private:
   void startReceiver();
   void startSender();
+
   void onInterest(const InterestFilter& filter, const Interest& interest);
   void onRegisterFailed(const Name& prefix, const std::string& reason);
+  void onData(const Interest& interest, const Data& data);
+  void onTimeout(const Interest& interest);
+
+  void sendInterest(const std::string data_name);
   void sendData(const std::string data_name, const std::string content);
 };
 

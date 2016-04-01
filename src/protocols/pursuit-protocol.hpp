@@ -56,6 +56,8 @@ private:
 
   int publishScope(const std::string name);
   int publishInfo(const std::string name);
+  int subscribe_uri(const std::string uri);
+  int unsubscribe_item(const std::string uri);
 };
 
 #endif /* FP7_PURSUIT_PROTOCOL__HPP_ */

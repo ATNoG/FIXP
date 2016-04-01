@@ -20,7 +20,7 @@
 
 #include <curl/curl.h>
 #include <curl/multi.h>
-#include <iostream>
+#include <string.h>
 
 extern "C" HttpProtocol* create_plugin_object(ConcurrentBlockingQueue<const MetaMessage*>& queue,
                                               ThreadPool& tp)
@@ -34,11 +34,19 @@ extern "C" void destroy_object(HttpProtocol* object)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-std::string createForeignUri(const std::string o_uri)
+std::string removeSchemaFromUri(std::string uri)
 {
-  //TODO
-  return "";
+  std::string schema_division = "://";
+  size_t pos = uri.find(schema_division); //TODO: Schema division not found
+  return uri.substr(pos + schema_division.length());
 }
+
+std::string createForeignUri(std::string o_uri)
+{
+  return std::string(SCHEMA) + DEFAULT_HOSTNAME + (HTTPD_PORT == 80 ? "" : ":" + std::to_string(HTTPD_PORT))
+          + "/" + removeSchemaFromUri(o_uri);
+}
+///////////////////////////////////////////////////////////////////////////////
 
 size_t getHttpContent(const void *content, const size_t size, const size_t nmemb, std::string *data)
 {
@@ -100,6 +108,8 @@ HttpProtocol::~HttpProtocol()
 void HttpProtocol::stop()
 {
   isRunning = false;
+
+  MHD_stop_daemon(daemon);
   _msg_to_send.stop();
 
   _msg_receiver.join();
@@ -127,7 +137,13 @@ std::string HttpProtocol::installMapping(const std::string uri)
 
 void HttpProtocol::startReceiver()
 {
-  //TODO
+  daemon = MHD_start_daemon(MHD_USE_SELECT_INTERNALLY | MHD_USE_POLL | MHD_USE_SUSPEND_RESUME,
+                            HTTPD_PORT, NULL, NULL,
+                            &HttpProtocol::static_answer_to_connection, this, MHD_OPTION_END);
+  if(daemon == NULL) {
+    FIFU_LOG_ERROR("Unable to start HTTP server capabilities");
+    return;
+  }
 }
 
 void HttpProtocol::startSender()
@@ -151,18 +167,101 @@ void HttpProtocol::processMessage(const MetaMessage* msg)
 {
   FIFU_LOG_INFO("(HTTP Protocol) Processing message (" + msg->getUri() + ")");
 
-  // Request content from the original network
-  std::tuple<std::string, std::string> content = requestHttpUri(msg->getUri());
+  std::string f_prefix;
+  f_prefix.append(SCHEMA).append(DEFAULT_HOSTNAME)
+          .append((HTTPD_PORT == 80 ? "" : ":" + std::to_string(HTTPD_PORT)));
 
-  // Send received response to Core
-  MetaMessage* response = new MetaMessage();
-  response->setUri(msg->getUri());
-  response->setContent(std::get<0>(content), std::get<1>(content));
+  if(msg->getUri().find(f_prefix) != std::string::npos) {
+    responseHttpUri(msg);
+  } else {
+    // Request content from the original network
+    std::tuple<std::string, std::string> content = requestHttpUri(msg->getUri());
 
-  FIFU_LOG_INFO("(HTTP Protocol) Received response of " + msg->getUri());
-  receivedMessage(response);
+    // Send received response to Core
+    MetaMessage* response = new MetaMessage();
+    response->setUri(msg->getUri());
+    response->setMessageType(MESSAGE_TYPE_RESPONSE);
+    response->setContent(std::get<0>(content), std::get<1>(content));
+
+    FIFU_LOG_INFO("(HTTP Protocol) Received response of " + msg->getUri());
+    receivedMessage(response);
+  }
 
   // Release the kraken
   delete msg;
+}
+
+int HttpProtocol::static_answer_to_connection(void *cls, struct MHD_Connection *connection,
+                                              const char *url,
+                                              const char *method, const char *version,
+                                              const char *upload_data,
+                                              size_t *upload_data_size, void **con_cls)
+{
+  static int dummy;
+  if(strcmp(method, "GET") != 0) {
+    return MHD_NO;
+  }
+
+  if(&dummy != *con_cls) {
+    *con_cls = &dummy;
+    return MHD_YES;
+  }
+
+  if(*upload_data_size != 0) {
+    return MHD_NO;
+  }
+  *con_cls = NULL;
+
+  HttpProtocol* instance = (HttpProtocol*) cls;
+  return instance->answer_to_connection(connection, url, method, version, upload_data, upload_data_size, con_cls);
+}
+
+int HttpProtocol::answer_to_connection(struct MHD_Connection *connection,
+                                       const char *url,
+                                       const char *method, const char *version,
+                                       const char *upload_data,
+                                       size_t *upload_data_size, void **con_cls)
+{
+  MetaMessage* in = new MetaMessage();
+  const char* value = MHD_lookup_connection_value(connection, MHD_HEADER_KIND, "Host");
+  in->setUri(std::string(SCHEMA) + value + url);
+  in->setMessageType(MESSAGE_TYPE_REQUEST);
+
+  FIFU_LOG_INFO("(HTTP Protocol) Received GET request to " + in->getUri());
+  pendingRequests.emplace(in->getUri(), connection);
+  MHD_suspend_connection(connection);
+
+  receivedMessage(in);
+
+  return MHD_YES;
+}
+
+void HttpProtocol::responseHttpUri(const MetaMessage* msg)
+{
+  // Get pending connection
+  auto it = pendingRequests.find(msg->getUri());
+  if(it == pendingRequests.end()) {
+    return;
+  }
+
+  if(it->second == NULL) {
+    return;
+  }
+  struct MHD_Connection* connection = it->second;
+  pendingRequests.erase(it);
+
+  struct MHD_Response* response;
+  response = MHD_create_response_from_buffer(msg->getContentData().size(), (void*) msg->getContentData().c_str(), MHD_RESPMEM_PERSISTENT);
+  MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE, msg->getContentType().c_str());
+
+  MHD_resume_connection(connection);
+  int ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+  if(ret == MHD_YES) {
+    FIFU_LOG_INFO("(HTTP Protocol) Sending the response message of " + msg->getUri());
+  } else {
+    FIFU_LOG_INFO("(HTTP Protocol) Failed to send response message of " + msg->getUri());
+  }
+
+  MHD_destroy_response(response);
 }
 

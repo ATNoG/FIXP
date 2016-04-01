@@ -36,13 +36,13 @@ std::string removeSchemaFromUri(std::string uri)
 {
   std::string schema_division = "://";
   size_t pos = uri.find(schema_division); //TODO: Schema division not found
-  return uri.substr(pos+schema_division.length());
+  return "/" + uri.substr(pos+schema_division.length());
 }
 
 std::string createForeignUri(std::string o_uri)
 {
   std::string f_uri;
-  f_uri.append(SCHEMA).append("/").append(removeSchemaFromUri(o_uri));
+  f_uri.append(SCHEMA).append(DEFAULT_PREFIX).append(removeSchemaFromUri(o_uri));
 
   return f_uri;
 }
@@ -97,9 +97,24 @@ void NdnProtocol::onInterest(const InterestFilter& filter, const Interest& inter
 {
   MetaMessage* in = new MetaMessage();
   in->setUri(SCHEMA + interest.getName().toUri().substr(1, std::string::npos));
+  in->setMessageType(MESSAGE_TYPE_REQUEST);
 
   FIFU_LOG_INFO("(NDN Protocol) Received Interest message to " + in->getUri());
   receivedMessage(in);
+}
+
+void NdnProtocol::sendInterest(const std::string data_name)
+{
+  Interest interest(data_name);
+  interest.setInterestLifetime(time::milliseconds(5000));
+  interest.setMustBeFresh(true);
+
+  FIFU_LOG_INFO("(NDN Protocol) Sending Interest message to " + data_name);
+  _face.expressInterest(interest,
+                        bind(&NdnProtocol::onData, this,  _1, _2),
+                        bind(&NdnProtocol::onTimeout, this, _1));
+
+  _face.processEvents();
 }
 
 void NdnProtocol::sendData(const std::string data_name, const std::string content)
@@ -122,6 +137,26 @@ void NdnProtocol::onRegisterFailed(const Name& prefix, const std::string& reason
 {
   FIFU_LOG_ERROR("(NDN Protocol) ERROR (" + reason + "): Failed to register prefix in local hub's daemon.")
   _face.shutdown();
+}
+
+void NdnProtocol::onData(const Interest& interest, const Data& data)
+{
+  Block content = data.getContent();
+
+  MetaMessage* in = new MetaMessage();
+  in->setUri(SCHEMA + interest.getName().toUri().substr(1, std::string::npos));
+  in->setMessageType(MESSAGE_TYPE_RESPONSE);
+  in->setContent("", std::string(reinterpret_cast<const char*>(content.value()),
+                                                               content.value_size()));
+
+  FIFU_LOG_INFO("(NDN Protocol) Received Data message to " + in->getUri());
+  receivedMessage(in);
+}
+
+void NdnProtocol::onTimeout(const Interest& interest)
+{
+  FIFU_LOG_INFO("(NDN Protocol) Interest timeout to " +
+                std::string(SCHEMA) + interest.getName().toUri().substr(1, std::string::npos));
 }
 
 void NdnProtocol::startReceiver()
@@ -149,7 +184,16 @@ void NdnProtocol::startSender()
 void NdnProtocol::processMessage(const MetaMessage* msg)
 {
   FIFU_LOG_INFO("(NDN Protocol) Processing message (" + msg->getUri() + ")");
-  sendData(msg->getUri().substr(std::string(SCHEMA).size(),
-                                std::string::npos),
-           msg->getContentData());
+
+  if(msg->getMessageType() == MESSAGE_TYPE_REQUEST) {
+    // Send Interest message
+    sendInterest(msg->getUri().substr(std::string(SCHEMA).size(),
+                                      std::string::npos));
+
+  } else if(msg->getMessageType() == MESSAGE_TYPE_RESPONSE) {
+    // Send Data message
+    sendData(msg->getUri().substr(std::string(SCHEMA).size(),
+                                  std::string::npos),
+             msg->getContentData());
+  }
 }

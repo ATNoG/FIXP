@@ -101,9 +101,24 @@ void PursuitProtocol::startReceiver()
       case START_PUBLISH: {
         MetaMessage* in = new MetaMessage();
         in->setUri(SCHEMA + chararray_to_hex(ev.id));
+        in->setMessageType(MESSAGE_TYPE_REQUEST);
 
         FIFU_LOG_INFO("(PURSUIT Protocol) Received START_PUBLISH to " + in->getUri());
         receivedMessage(in);
+      } break;
+
+      case PUBLISHED_DATA: {
+
+        MetaMessage* in = new MetaMessage();
+        in->setUri(SCHEMA + chararray_to_hex(ev.id));
+        in->setMessageType(MESSAGE_TYPE_RESPONSE);
+        in->setContent("", std::string(reinterpret_cast<const char*>(ev.data),
+                                                                     ev.data_len));
+        unsubscribe_item(in->getUri());
+
+        FIFU_LOG_INFO("(PURSUIT Protocol) Received START_PUBLISH to " + in->getUri());
+        receivedMessage(in);
+
       } break;
     }
   }
@@ -131,13 +146,22 @@ void PursuitProtocol::processMessage(const MetaMessage* msg)
 {
   FIFU_LOG_INFO("(PURSUIT Protocol) Processing message (" + msg->getUri() + ")");
 
-  ba->publish_data(hex_to_chararray(msg->getUri().substr(std::string(SCHEMA).size(),
-                                                     std::string::npos)),
-                                    DOMAIN_LOCAL,
-                                    NULL,
-                                    0,
-                                    (void*) msg->getContentData().c_str(),
-                                    msg->getContentData().size());
+  if(msg->getMessageType() == MESSAGE_TYPE_REQUEST) {
+    // Subscribe URI
+    FIFU_LOG_INFO("(PURSUIT Protocol) Subscribing data related with " + msg->getUri());
+    subscribe_uri(msg->getUri());
+
+  } else if(msg->getMessageType() == MESSAGE_TYPE_RESPONSE) {
+    // Start publishing data
+    FIFU_LOG_INFO("(PURSUIT Protocol) Publishing Data related with " + msg->getUri());
+    ba->publish_data(hex_to_chararray(msg->getUri().substr(std::string(SCHEMA).size(),
+                                                           std::string::npos)),
+                                      DOMAIN_LOCAL,
+                                      NULL,
+                                      0,
+                                      (void*) msg->getContentData().c_str(),
+                                      msg->getContentData().size());
+  }
 
   // Release the kraken
   delete msg;
@@ -171,6 +195,40 @@ int PursuitProtocol::publishInfo(const std::string name)
                    DOMAIN_LOCAL,
                    NULL,
                    0);
+
+  return 0;
+}
+
+int PursuitProtocol::subscribe_uri(const std::string uri)
+{
+  std::string uri_wo_schema = uri.substr(std::string(SCHEMA).size());
+
+  size_t id_init_pos    = uri_wo_schema.size() - PURSUIT_ID_LEN_HEX_FORMAT;
+  std::string prefix_id = uri_wo_schema.substr(0, id_init_pos);
+  std::string id        = uri_wo_schema.substr(id_init_pos, PURSUIT_ID_LEN_HEX_FORMAT);
+
+  ba->subscribe_info(hex_to_chararray(id),
+                     hex_to_chararray(prefix_id),
+                     DOMAIN_LOCAL,
+                     NULL,
+                     0);
+
+  return 0;
+}
+
+int PursuitProtocol::unsubscribe_item(const std::string uri)
+{
+  std::string uri_wo_schema = uri.substr(std::string(SCHEMA).size());
+
+  size_t id_init_pos    = uri_wo_schema.size() - PURSUIT_ID_LEN_HEX_FORMAT;
+  std::string prefix_id = uri_wo_schema.substr(0, id_init_pos);
+  std::string id        = uri_wo_schema.substr(id_init_pos, PURSUIT_ID_LEN_HEX_FORMAT);
+
+  ba->unsubscribe_info(hex_to_chararray(id),
+                       hex_to_chararray(prefix_id),
+                       DOMAIN_LOCAL,
+                       NULL,
+                       0);
 
   return 0;
 }

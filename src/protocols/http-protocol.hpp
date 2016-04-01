@@ -22,15 +22,22 @@
 #include "concurrent-blocking-queue.hpp"
 #include "thread-pool.hpp"
 
+#include <microhttpd.h>
 #include <thread>
 
 #define SCHEMA "http://"
 
+#define DEFAULT_HOSTNAME "127.0.0.1"
+#define HTTPD_PORT 8000
+
 class HttpProtocol : public PluginProtocol
 {
 private:
+  struct MHD_Daemon* daemon;
   std::thread _msg_receiver;
   std::thread _msg_sender;
+
+  std::map<std::string, MHD_Connection*> pendingRequests;
 
 public:
   HttpProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
@@ -51,6 +58,20 @@ private:
   void startSender();
 
   void sendMessage(const MetaMessage* out);
+
+  static int static_answer_to_connection(void *cls, struct MHD_Connection *connection,
+                                         const char *url,
+                                         const char *method, const char *version,
+                                         const char *upload_data,
+                                         size_t *upload_data_size, void **con_cls);
+
+  int answer_to_connection(struct MHD_Connection *connection,
+                           const char *url,
+                           const char *method, const char *version,
+                           const char *upload_data,
+                           size_t *upload_data_size, void **con_cls);
+
+  void responseHttpUri(const MetaMessage* msg);
 };
 
 #endif /* HTTP_PROTOCOL__HPP_ */

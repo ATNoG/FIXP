@@ -48,7 +48,7 @@ ndn-protocol.so: $(SRC_DIR)/ndn-protocol.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(NDNCXXFLAGS) $(LDFLAGS) $(NDNLDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
 
 http-protocol.so: $(SRC_DIR)/http-protocol.o $(BUILD_DIR)
-	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -lcurl
+	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -lcurl -lmicrohttpd
 
 clean:
 	$(RM) -f $(OBJS)
