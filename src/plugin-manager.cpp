@@ -22,8 +22,8 @@
 #include "plugin-converter-factory.hpp"
 
 #include <iostream>
+#include <sys/stat.h>
 #include <thread>
-#include <boost/filesystem.hpp>
 
 ///////////////////////////////////////////////////////////////////////////////
 std::string extractSchema(const std::string uri)
@@ -44,9 +44,16 @@ void PluginManager::loadProtocol(const std::string path,
                                  ConcurrentBlockingQueue<const MetaMessage*>& queue,
                                  ThreadPool& tp)
 {
-  boost::filesystem::path file(path);
-  if(!boost::filesystem::exists(file) ||
-     !boost::filesystem::is_regular_file(file)) {
+  struct stat fileStat;
+  if(stat(path.c_str(), &fileStat) != 0) {
+    FIFU_LOG_WARN("(PluginManager) '" + path +
+                  "' not loaded (file not found)");
+    return;
+  }
+
+  if(S_ISREG(fileStat.st_mode) == 0) {
+    FIFU_LOG_WARN("(PluginManager) '" + path +
+                  "' not loaded (file is not a regular file)");
     return;
   }
 
@@ -62,9 +69,16 @@ void PluginManager::loadProtocol(const std::string path,
 
 void PluginManager::loadConverter(const std::string path)
 {
-  boost::filesystem::path file(path);
-  if(!boost::filesystem::exists(file) ||
-     !boost::filesystem::is_regular_file(file)) {
+  struct stat fileStat;
+  if(stat(path.c_str(), &fileStat) != 0) {
+    FIFU_LOG_WARN("(PluginManager) '" + path +
+                  "' not loaded (file not found)");
+    return;
+  }
+
+  if(S_ISREG(fileStat.st_mode) == 0) {
+    FIFU_LOG_WARN("(PluginManager) '" + path +
+                  "' not loaded (file is not a regular file)");
     return;
   }
 

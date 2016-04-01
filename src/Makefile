@@ -26,7 +26,7 @@ RM=rm
 CFLAGS=
 CPPFLAGS=-I$(INCLUDE_DIR) -std=c++14
 LDFLAGS=
-LDLIBS=-ldl -lpthread -lboost_program_options -lboost_system -lboost_filesystem -lmagic
+LDLIBS=-ldl -lpthread -lboost_program_options -lmagic
 
 SOURCES=$(wildcard $(SRC_DIR)/*.cpp)
 OBJS=$(SOURCES:.cpp=.o)

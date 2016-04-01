@@ -18,23 +18,25 @@
 #include "plugin-manager.hpp"
 #include "plugin-factory.hpp"
 
-#include <boost/filesystem.hpp>
+#include <dirent.h>
+#include <iostream>
 
 void PluginManager::loadPlugins(const std::string path_to_plugins)
 {
-  boost::filesystem::path path(path_to_plugins);
-  if(!boost::filesystem::exists(path) ||
-     !boost::filesystem::is_directory(path)) {
+  DIR *dir = opendir(path_to_plugins.c_str());
+  if(dir == NULL) {
+    std::cout << "Error: Cannot open plugins folder "
+              << std::endl << std::flush;
     return;
   }
 
-  for(boost::filesystem::directory_iterator it(path);
-      it != boost::filesystem::directory_iterator();
-      ++it) {
-    if(boost::filesystem::is_regular_file(it->path())) {
+  struct dirent* dirEntry;
+  while(dirEntry = readdir(dir)) {
+    if(dirEntry->d_type == DT_REG) {
       // Create plugin and map it with the correspondent schema
       std::shared_ptr<Plugin> plugin
-                            = PluginFactory::createPlugin(it->path().string());
+                        = PluginFactory::createPlugin(path_to_plugins + "/" +
+                                                      dirEntry->d_name);
       _plugins.emplace(std::piecewise_construct,
                        std::forward_as_tuple(plugin->getSchema()),
                        std::forward_as_tuple(plugin));

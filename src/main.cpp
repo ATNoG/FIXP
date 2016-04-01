@@ -19,10 +19,10 @@
 #include "logger.hpp"
 #include "thread-pool.hpp"
 
+#include <dirent.h>
 #include <iostream>
 #include <fstream>
 #include <signal.h>
-#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
 #define USAGE "Usage: fixp [OPTIONS] -r <resource file> " \
@@ -38,34 +38,32 @@ void signalHandler(int signum)
 
 void loadProtocols(Core& core, const std::string path)
 {
-  boost::filesystem::path dir(path);
-  if(!boost::filesystem::exists(dir) ||
-     !boost::filesystem::is_directory(dir)) {
+  DIR *dir = opendir(path.c_str());
+  if(dir == NULL) {
+    FIFU_LOG_WARN("(Main) Error while opening protocol plugins folder");
     return;
   }
 
-  for(boost::filesystem::directory_iterator it(dir);
-      it != boost::filesystem::directory_iterator();
-      ++it) {
-    if(boost::filesystem::is_regular_file(it->path())) {
-      core.loadProtocol(it->path().string());
+  struct dirent* dirEntry;
+  while(dirEntry = readdir(dir)) {
+    if(dirEntry->d_type == DT_REG) {
+      core.loadProtocol(path + "/" + dirEntry->d_name);
     }
   }
 }
 
 void loadConverters(Core& core, const std::string path)
 {
-  boost::filesystem::path dir(path);
-  if(!boost::filesystem::exists(dir) ||
-     !boost::filesystem::is_directory(dir)) {
+  DIR *dir = opendir(path.c_str());
+  if(dir == NULL) {
+    FIFU_LOG_WARN("(Main) Error while opening converter plugins folder");
     return;
   }
 
-  for(boost::filesystem::directory_iterator it(dir);
-      it != boost::filesystem::directory_iterator();
-      ++it) {
-    if(boost::filesystem::is_regular_file(it->path())) {
-      core.loadConverter(it->path().string());
+  struct dirent* dirEntry;
+  while(dirEntry = readdir(dir)) {
+    if(dirEntry->d_type == DT_REG) {
+      core.loadConverter(path + "/" + dirEntry->d_name);
     }
   }
 }
