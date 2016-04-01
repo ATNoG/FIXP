@@ -17,7 +17,7 @@
 
 #include "http-protocol.hpp"
 
-#include <sstream>
+#include <boost/log/trivial.hpp>
 #include <curl/curl.h>
 
 extern "C" HttpProtocol* create_plugin_object(boost::lockfree::queue<MetaMessage*>& queue)
@@ -49,6 +49,9 @@ size_t getHttpContent(void *content, size_t size, size_t nmemb, std::string *dat
 
 std::string requestHttpUri(std::string uri)
 {
+  BOOST_LOG_TRIVIAL(trace) << "[HTTP Protocol Plugin]" << std::endl
+                           << " - Requesting" << uri << std::endl;
+
   CURL *curl;
   CURLcode res;
   std::string content;
@@ -61,8 +64,9 @@ std::string requestHttpUri(std::string uri)
 
     res = curl_easy_perform(curl);
     if(res != CURLE_OK) {
-      std::cerr << "Error[" << curl_easy_strerror(res)
-                << "] while fetching " << uri;
+      BOOST_LOG_TRIVIAL(warning) << "[HTTP Protocol Plugin]" << std::endl
+                                 << "[" << curl_easy_strerror(res)
+                                 << "] Unable to get " << uri << std::endl;
     }
 
     curl_easy_cleanup(curl);
@@ -101,8 +105,11 @@ std::string HttpProtocol::installMapping(std::string uri)
 
   // Remove schema from uri
   if(f_uri.find(SCHEMA) == std::string::npos) {
-    std::cerr << "Error: Invalid schema (" << f_uri << ")" << std::endl << std::flush;
-    return NULL;
+    BOOST_LOG_TRIVIAL(warning) << "[HTTP Protocol Plugin]" << std::endl
+                               << " - Foreign URI (" << f_uri
+                               << ") with an invalid schema"
+                               << "(Original: " << uri << ")" << std::endl;
+    return "";
   }
 
   return f_uri;
@@ -119,6 +126,10 @@ void HttpProtocol::startSender()
 
   while(isRunning) {
     while(_msg_to_send.pop(msg)) {
+      BOOST_LOG_TRIVIAL(trace) << "[HTTP Protocol Plugin]"  << std::endl
+                               << " - Processing next message in the queue ("
+                               << msg->_uri << ")" << std::endl;
+
       // Request content from the original network
       std::string contentPayload = requestHttpUri(msg->_uri);
 
@@ -127,6 +138,9 @@ void HttpProtocol::startSender()
       in->_uri = msg->_uri;
       in->_contentPayload = contentPayload;
 
+      BOOST_LOG_TRIVIAL(trace) << "[HTTP Protocol Plugin]" << std::endl
+                               << " Retrieving the response of " << msg->_uri
+                               << " to FIXP" << std::endl;
       receivedMessage(in);
 
       // Release the kraken

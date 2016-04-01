@@ -20,9 +20,13 @@
 #include <fstream>
 #include <signal.h>
 #include <boost/filesystem.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
 #include <boost/program_options.hpp>
 
-#define USAGE "Usage: fixp [OPTIONS] -r <resource file> -p <path_to_protocols> -c <path_to_converters>"
+#define USAGE "Usage: fixp [OPTIONS] -r <resource file> " \
+              "-p <path_to_protocols> -c <path_to_converters> " \
+              "-v <verbose_level>"
 
 Core* core;
 
@@ -92,6 +96,13 @@ void load_resources(Core& core, std::string path)
   file.close();
 }
 
+void load_logger(unsigned short level)
+{
+  boost::log::core::get()->set_filter(
+    boost::log::trivial::severity > boost::log::trivial::fatal - level
+  );
+}
+
 int main(int argc, char* argv[])
 {
   signal(SIGINT, signalHandler);
@@ -99,6 +110,7 @@ int main(int argc, char* argv[])
   std::string path_to_resources;
   std::string path_to_protocols;
   std::string path_to_converters;
+  unsigned short verbosity;
 
   boost::program_options::options_description desc("Options");
   boost::program_options::variables_map vm;
@@ -110,6 +122,8 @@ int main(int argc, char* argv[])
                 "Path to protocol endpoint plugins")
       ("converters,c", boost::program_options::value<std::string>(&path_to_converters)->required(),
                 "Path to protocol convertion plugins")
+      ("verbose,v", boost::program_options::value<unsigned short>(&verbosity)->default_value(4),
+                "Produce verbose output (up to 6 levels)")
       ("help,h", "Display configuration options");
 
     boost::program_options::store(boost::program_options::parse_command_line(argc,
@@ -128,10 +142,12 @@ int main(int argc, char* argv[])
       return 0;
     } else {
       std::cout << USAGE << std::endl << desc << std::endl;
-      std::cerr << "Error: " << e.what() << std::endl << std::flush;
+      std::cout << "Error: " << e.what() << std::endl << std::flush;
       return 1;
     }
   }
+
+  load_logger(verbosity);
 
   core = new Core();
 

@@ -17,6 +17,7 @@
 
 #include "pursuit-protocol.hpp"
 
+#include <boost/log/trivial.hpp>
 #include <cryptopp/sha.h>
 
 extern "C" PursuitProtocol* create_plugin_object(boost::lockfree::queue<MetaMessage*>& queue)
@@ -83,8 +84,11 @@ std::string PursuitProtocol::installMapping(std::string uri)
 
   // Remove schema from uri
   if(f_uri.find(SCHEMA) == std::string::npos) {
-    std::cerr << "Error: Invalid schema (" << f_uri << ")" << std::endl << std::flush;
-    return NULL;
+    BOOST_LOG_TRIVIAL(warning) << "[PURSUIT Protocol Plugin]" << std::endl
+                               << " - Foreign URI (" << f_uri
+                               << ") with an invalid schema"
+                               << "(Original: " << uri << ")" << std::endl;
+    return "";
   }
 
   // Publish resource on the behalf of the original publisher
@@ -102,7 +106,13 @@ void PursuitProtocol::startReceiver()
       case START_PUBLISH: {
         MetaMessage* in = new MetaMessage();
         in->_uri = SCHEMA + chararray_to_hex(ev.id);
+        BOOST_LOG_TRIVIAL(trace) << "[PURSUIT Protocol Plugin]" << std::endl
+                                 << " - Received request for "
+                                 << in->_uri << std::endl;
 
+        BOOST_LOG_TRIVIAL(trace) << "[PURSUIT Protocol Plugin]" << std::endl
+                                 << " - Retrieving request of " << in->_uri
+                                 << " to FIXP" << std::endl;
         receivedMessage(in);
       } break;
     }
@@ -115,8 +125,14 @@ void PursuitProtocol::startSender()
 
   while(isRunning) {
     while(_msg_to_send.pop(msg)) {
+      BOOST_LOG_TRIVIAL(trace) << "[PURSUIT Protocol Plugin]" << std::endl
+                               << "Processing next message in the queue ("
+                               << msg->_uri << ")" << std::endl;
+
       //FIXME: Launch thread to handle send operation
-      std::cout << "START_PUBLISH: " << msg->_uri << endl;
+      BOOST_LOG_TRIVIAL(trace) << "[PURSUIT Protocol Plugin]" << std::endl
+                               << " - Starting publishing item ("
+                               << msg->_uri << ")" << std::endl;
       ba->publish_data(hex_to_chararray(msg->_uri.substr(std::string(SCHEMA).size(),
                                                          std::string::npos)),
                                         DOMAIN_LOCAL,
@@ -137,6 +153,8 @@ int PursuitProtocol::publishScope(std::string name)
   std::string prefix_id = name.substr(0, id_init_pos);
   std::string id        = name.substr(id_init_pos, PURSUIT_ID_LEN_HEX_FORMAT);
 
+  BOOST_LOG_TRIVIAL(trace) << "[PURSUIT Protocol Plugin]" << std::endl
+                           << " - Publishing scope " << name << std::endl;
   ba->publish_scope(hex_to_chararray(id),
                     hex_to_chararray(prefix_id),
                     DOMAIN_LOCAL,
@@ -152,6 +170,8 @@ int PursuitProtocol::publishInfo(std::string name)
   std::string prefix_id = name.substr(0, id_init_pos);
   std::string id        = name.substr(id_init_pos, PURSUIT_ID_LEN_HEX_FORMAT);
 
+  BOOST_LOG_TRIVIAL(trace) << "[PURSUIT Protocol Plugin]" << std::endl
+                           << " - Publishing item " << name << std::endl;
   ba->publish_info(hex_to_chararray(id),
                    hex_to_chararray(prefix_id),
                    DOMAIN_LOCAL,

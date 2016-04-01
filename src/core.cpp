@@ -17,6 +17,8 @@
 
 #include "core.hpp"
 
+#include <boost/log/trivial.hpp>
+
 void Core::loadProtocol(std::string path)
 {
   pm.loadProtocol(path, _queue);
@@ -34,11 +36,13 @@ void Core::createMapping(std::string uri)
 
   std::vector<std::string> f_uris = pm.installMapping(uri);
   for(auto f_uri : f_uris) {
-    std::cout << f_uri << " -> " << uri << std::endl << std::flush;
+    //FIXME: handle empty strings
+    BOOST_LOG_TRIVIAL(info) << "[FIXP (Core)]" << std::endl
+                            << " - New mapping: " << f_uri << " -> "
+                            << uri << std::endl;
     _mappings.emplace(uri, f_uri);
     _mappings.emplace(f_uri, uri);
   }
-  std::cout << std::endl << std::flush;
 }
 
 void Core::stop()
@@ -53,13 +57,19 @@ void Core::start()
   MetaMessage* in;
   while(isRunning) {
     while(_queue.pop(in)) {
+      BOOST_LOG_TRIVIAL(trace) << "[FIXP (Core)]" << std::endl
+                               << " - Processing next message in the queue ("
+                               << in->_uri << ")" << std::endl;
+
       //FIXME: Launch thread to handle send operation
       MetaMessage* out = new MetaMessage();
       std::map<std::string, std::string>::iterator it;
       if((it = _mappings.find(in->_uri)) != _mappings.end()) {
         out->_uri = it->second;
       } else {
-        std::cerr << "Mapping for " << in->_uri << " not found!" << std::endl << std::flush;
+        BOOST_LOG_TRIVIAL(warning) << "[FIXP (Core)]" << std::endl
+                                   << " - Mapping for " << in->_uri
+                                   << " not found" << std::endl;
         continue;
       }
 
