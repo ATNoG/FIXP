@@ -16,7 +16,8 @@ apt-get install -o dir::cache::archives="/cache/apt" -y \
 #Install FIFu library requirements
 apt-get install -o dir::cache::archives="/cache/apt" -y \
   libcrypto++-dev \
-  libcurl4-gnutls-dev && \
+  libcurl4-gnutls-dev \
+  libmagic-dev && \
 
 #Install Click
 CLICK_DIR=/cache/click
