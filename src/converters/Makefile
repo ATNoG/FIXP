@@ -14,7 +14,7 @@
 ##  You should have received a copy of the GNU General Public License
 ##  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-TARGET=http-to-pursuit.so pursuit-to-http.so http-to-ndn.so ndn-to-http.so
+TARGET=http-to-pursuit.so http-to-ndn.so
 SRC_DIR=.
 INCLUDE_DIR=../../include
 BUILD_DIR=../../dist/fixp-converters
@@ -39,12 +39,6 @@ http-to-pursuit.so: $(SRC_DIR)/http-to-pursuit.cpp $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
 
 http-to-ndn.so: $(SRC_DIR)/http-to-ndn.cpp $(BUILD_DIR)
-	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
-
-pursuit-to-http.so: $(SRC_DIR)/pursuit-to-http.cpp $(BUILD_DIR)
-	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
-
-ndn-to-http.so: $(SRC_DIR)/ndn-to-http.cpp $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
 
 clean:
