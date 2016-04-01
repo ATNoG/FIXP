@@ -1,29 +1,62 @@
 #/bin/bash
 
+CWD=`pwd`
+mkdir -p $CWD/cache
+
 #Update
 apt-get update -qq
 
 #Install build tools 
 #TODO: install just the required packages
-apt-get install -y build-essential && \
-apt-get install -y git && \
-apt-get install -y libboost-all-dev && \
+apt-get install -o dir::cache::archives="$CWD/cache/apt" -y build-essential && \
+apt-get install -o dir::cache::archives="$CWD/cache/apt" -y git && \
+apt-get install -o dir::cache::archives="$CWD/cache/apt" -y libboost-all-dev && \
 
 #Install FIFu library requirements
-apt-get install -y libcrypto++-dev libcurl4-gnutls-dev
+apt-get install -o dir::cache::archives="$CWD/cache/apt" -y libcrypto++-dev libcurl4-gnutls-dev
 
 #Install Click
-apt-get install -y tcpdump libpcap-dev time
-git clone https://github.com/kohler/click.git /tmp/click && \
-cd /tmp/click && \
-./configure --disable-linuxmodule --enable-ip6 --enable-json && make && make install && \ #TODO: Check why make check fails
+CLICK_DIR=$CWD/cache/click
+apt-get install -o dir::cache::archives="$CWD/cache/apt" -y tcpdump libpcap-dev time
+if [ ! -d "$CLICK_DIR" ]; then
+  echo "Cloning repository"
+  git clone https://github.com/kohler/click.git $CLICK_DIR && \
+  cd $CLICK_DIR && \
+  ./configure --disable-linuxmodule --enable-ip6 --enable-json && make && make install #TODO: Check why make check fails
+else
+  echo "Pulling"
+  cd $CLICK_DIR && \
+  git pull && \
+  make && make install
+fi
+rc=$?
+if [ ! $rc -eq 0 ]; then
+  exit $rc
+fi
 
 #Install Blackadder
-apt-get -y install libtool autoconf automake libigraph0 libigraph0-dev libconfig++8 libconfig++8-dev libtclap-dev libboost-graph-dev && \
-git clone https://github.com/fp7-pursuit/blackadder /tmp/blackadder && \
-cd /tmp/blackadder/src && \
-./configure --disable-linuxmodule && make && make install && \
-cd /tmp/blackadder/lib && \
-#autoreconf –fi && \ #TODO: Check why this fails on the script
-./configure && make && make install && \
-cd ~
+BLACKADDER_DIR=$CWD/cache/blackadder
+apt-get install -o dir::cache::archives="$CWD/cache/apt" -y \
+	libtool autoconf automake libigraph0 libigraph0-dev libconfig++8 libconfig++8-dev libtclap-dev libboost-graph-dev && \
+if [ ! -d "$BLACKADDER_DIR" ]; then
+  echo "Cloning repository"
+  git clone https://github.com/fp7-pursuit/blackadder $BLACKADDER_DIR && \
+  cd $BLACKADDER_DIR/src && \
+  ./configure --disable-linuxmodule && make && make install && \
+  cd $BLACKADDER_DIR/lib && \
+  #autoreconf –fi && \ #TODO: Check why this fails on the script
+  ./configure && make && make install
+else
+  echo "Pulling"
+  cd $BLACKADDER_DIR &&\
+  git pull &&\
+  cd $BLACKADDER_DIR/src && \
+  make && make install && \
+  cd $BLACKADDER_DIR/lib && \
+  make && make install
+fi
+rc=$?
+if [ ! $rc -eq 0 ]; then
+  exit $rc
+fi
+cd $CWD
