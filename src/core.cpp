@@ -16,6 +16,7 @@
  */
 
 #include "core.hpp"
+#include "logger.hpp"
 
 #include <iostream>
 
@@ -47,9 +48,7 @@ std::vector<std::string> Core::createMapping(std::string o_uri)
   f_uris = pm.installMapping(o_uri);
   for(auto f_uri : f_uris) {
     //FIXME: handle empty strings
-    std::cout << "[FIXP (Core)]" << std::endl
-              << " - New mapping: " << f_uri << " -> "
-              << o_uri << std::endl;
+    FIFU_LOG_INFO("(Core) New mapping: " + f_uri + " -> " + o_uri);
 
     _mappings.emplace(f_uri, o_uri);
   }
@@ -77,11 +76,8 @@ void Core::start()
       return;
     }
 
-    std::cout << "[FIXP (Core)]" << std::endl
-              << " - Processing next message in the queue ("
-              << in->getUri() << ")" << std::endl;
-
     // Schedule message processing
+    FIFU_LOG_INFO("(Core) Scheduling next message (" + in->getUri() + ") processing");
     std::function<void()> func(std::bind(&Core::processMessage, this, in));
     _tp.schedule(std::move(func));
   }
@@ -89,6 +85,7 @@ void Core::start()
 
 void Core::processMessage(MetaMessage* msg)
 {
+    FIFU_LOG_INFO("(Core) Processing message (" + msg->getUri() + ")");
     std::vector<std::string> out_uris;
 
     // Begin: Locking scope
@@ -129,9 +126,7 @@ void Core::processMessage(MetaMessage* msg)
     } // End: Locking scope
 
     if(out_uris.size() == 0) {
-      std::cout << "[FIXP (Core)]" << std::endl
-                << " - Mapping for " << msg->getUri()
-                << " not found" << std::endl;
+      FIFU_LOG_WARN("(Core) Mapping for " + msg->getUri() + " not found!");
 
       delete msg;
       return;

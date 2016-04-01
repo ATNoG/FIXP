@@ -16,6 +16,7 @@
  */
 
 #include "pursuit-protocol.hpp"
+#include "logger.hpp"
 
 #include <cryptopp/sha.h>
 #include <iostream>
@@ -85,15 +86,6 @@ std::string PursuitProtocol::installMapping(std::string uri)
 {
   std::string f_uri = createForeignUri(uri);
 
-  // Remove schema from uri
-  if(f_uri.find(SCHEMA) == std::string::npos) {
-    std::cout << "[PURSUIT Protocol Plugin]" << std::endl
-              << " - Foreign URI (" << f_uri
-              << ") with an invalid schema"
-              << "(Original: " << uri << ")" << std::endl;
-    return "";
-  }
-
   // Publish resource on the behalf of the original publisher
   publishInfo(f_uri.substr(std::string(SCHEMA).size(), std::string::npos));
 
@@ -109,13 +101,8 @@ void PursuitProtocol::startReceiver()
       case START_PUBLISH: {
         MetaMessage* in = new MetaMessage();
         in->setUri(SCHEMA + chararray_to_hex(ev.id));
-        std::cout << "[PURSUIT Protocol Plugin]" << std::endl
-                  << " - Received request for "
-                  << in->getUri() << std::endl;
 
-        std::cout << "[PURSUIT Protocol Plugin]" << std::endl
-                  << " - Retrieving request of " << in->getUri()
-                  << " to FIXP" << std::endl;
+        FIFU_LOG_INFO("(PURSUIT Protocol) Received START_PUBLISH to " + in->getUri());
         receivedMessage(in);
       } break;
     }
@@ -133,10 +120,8 @@ void PursuitProtocol::startSender()
       return;
     }
 
-    std::cout << "[PURSUIT Protocol Plugin]" << std::endl
-              << "Processing next message in the queue ("
-              << out->getUri() << ")" << std::endl;
-
+    // Schedule message processing
+    FIFU_LOG_INFO("(PURSUIT Protocol) Scheduling next message (" + out->getUri() + ") processing");
     std::function<void()> func(std::bind(&PursuitProtocol::processMessage, this, out));
     _tp.schedule(std::move(func));
   }
@@ -144,9 +129,7 @@ void PursuitProtocol::startSender()
 
 void PursuitProtocol::processMessage(MetaMessage* msg)
 {
-  std::cout << "[PURSUIT Protocol Plugin]" << std::endl
-            << " - Starting publishing item ("
-            << msg->getUri() << ")" << std::endl;
+  FIFU_LOG_INFO("(PURSUIT Protocol) Processing message (" + msg->getUri() + ")");
 
   ba->publish_data(hex_to_chararray(msg->getUri().substr(std::string(SCHEMA).size(),
                                                      std::string::npos)),
@@ -166,8 +149,7 @@ int PursuitProtocol::publishScope(std::string name)
   std::string prefix_id = name.substr(0, id_init_pos);
   std::string id        = name.substr(id_init_pos, PURSUIT_ID_LEN_HEX_FORMAT);
 
-  std::cout << "[PURSUIT Protocol Plugin]" << std::endl
-            << " - Publishing scope " << name << std::endl;
+  FIFU_LOG_INFO("(PURSUIT Protocol) Publishing scope (" + name + ")");
   ba->publish_scope(hex_to_chararray(id),
                     hex_to_chararray(prefix_id),
                     DOMAIN_LOCAL,
@@ -183,8 +165,7 @@ int PursuitProtocol::publishInfo(std::string name)
   std::string prefix_id = name.substr(0, id_init_pos);
   std::string id        = name.substr(id_init_pos, PURSUIT_ID_LEN_HEX_FORMAT);
 
-  std::cout << "[PURSUIT Protocol Plugin]" << std::endl
-            << " - Publishing item " << name << std::endl;
+  FIFU_LOG_INFO("(PURSUIT Protocol) Publishing item (" + name + ")");
   ba->publish_info(hex_to_chararray(id),
                    hex_to_chararray(prefix_id),
                    DOMAIN_LOCAL,

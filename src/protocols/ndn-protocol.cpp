@@ -18,6 +18,7 @@
  */
 
 #include "ndn-protocol.hpp"
+#include "logger.hpp"
 
 extern "C" NdnProtocol* create_plugin_object(ConcurrentBlockingQueue<MetaMessage*>& queue,
                                              ThreadPool& tp)
@@ -80,6 +81,7 @@ void NdnProtocol::stop()
 std::string NdnProtocol::installMapping(std::string uri)
 {
   std::string f_uri = createForeignUri(uri);
+
   _face.setInterestFilter(removeSchemaFromUri(f_uri),
     bind(&NdnProtocol::onInterest, this, _1, _2),
     RegisterPrefixSuccessCallback(),
@@ -90,18 +92,10 @@ std::string NdnProtocol::installMapping(std::string uri)
 
 void NdnProtocol::onInterest(const InterestFilter& filter, const Interest& interest)
 {
-  std::cout << "[NDN Protocol Plugin]" << std::endl
-            << "Receiving Interest: " << interest << std::endl;
-
   MetaMessage* in = new MetaMessage();
   in->setUri(SCHEMA + interest.getName().toUri().substr(1, std::string::npos));
-  std::cout << "[NDN Protocol Plugin]" << std::endl
-                           << " - Received request for "
-                           << in->getUri() << std::endl;
 
-  std::cout << "[NDN Protocol Plugin]" << std::endl
-                           << " - Retrieving request of " << in->getUri()
-                           << " to FIXP" << std::endl;
+  FIFU_LOG_INFO("(NDN Protocol) Received Interest message to " + in->getUri());
   receivedMessage(in);
 }
 
@@ -117,17 +111,13 @@ void NdnProtocol::sendData(std::string data_name, std::string content)
   _key_chain.sign(*data);
 
   // Return Data packet to the requester
-  std::cout << "[NDN Protocol Plugin]" << std::endl
-            << " - Sending Data: " << *data << std::endl;
+  FIFU_LOG_INFO("(NDN Protocol) Sending Data message to " + data_name);
   _face.put(*data);
 }
 
 void NdnProtocol::onRegisterFailed(const Name& prefix, const std::string& reason)
 {
-  std::cerr << "[NDN Protocol Plugin]" << std::endl
-            << " - ERROR: Failed to register prefix \""
-            << prefix << "\" in local hub's daemon (" << reason << ")"
-            << std::endl;
+  FIFU_LOG_ERROR("(NDN Protocol) ERROR (" + reason + "): Failed to register prefix in local hub's daemon.")
   _face.shutdown();
 }
 
@@ -145,10 +135,9 @@ void NdnProtocol::startSender()
     } catch(...) {
       return;
     }
-    std::cout << "[NDN Protocol Plugin]" << std::endl
-                             << " - Processing next message in the queue ("
-                             << out->getUri() << ")" << std::endl;
 
+    // Schedule message processing
+    FIFU_LOG_INFO("(NDN Protocol) Scheduling next message (" + out->getUri() + ") processing");
     std::function<void()> func(std::bind(&NdnProtocol::processMessage, this, out));
     _tp.schedule(std::move(func));
   }
@@ -156,11 +145,8 @@ void NdnProtocol::startSender()
 
 void NdnProtocol::processMessage(MetaMessage* msg)
 {
-  std::cout << "[NDN Protocol Plugin]" << std::endl
-                             << " - Processing incoming message ("
-                             << msg->getUri() << ")" << std::endl;
-
+  FIFU_LOG_INFO("(NDN Protocol) Processing message (" + msg->getUri() + ")");
   sendData(msg->getUri().substr(std::string(SCHEMA).size(),
-                            std::string::npos),
+                                std::string::npos),
            msg->getContentData());
 }

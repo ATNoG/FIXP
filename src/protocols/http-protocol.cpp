@@ -16,6 +16,7 @@
  */
 
 #include "http-protocol.hpp"
+#include "logger.hpp"
 
 #include <curl/curl.h>
 #include <curl/multi.h>
@@ -51,8 +52,7 @@ size_t getHttpContent(void *content, size_t size, size_t nmemb, std::string *dat
 
 std::tuple<std::string, std::string> requestHttpUri(std::string uri)
 {
-  std::cout << "[HTTP Protocol Plugin]" << std::endl
-            << " - Requesting" << uri << std::endl;
+  FIFU_LOG_INFO("(HTTP Protocol) Requesting " + uri);
 
   CURL *curl;
   CURLcode res;
@@ -68,18 +68,15 @@ std::tuple<std::string, std::string> requestHttpUri(std::string uri)
 
     res = curl_easy_perform(curl);
     if(res != CURLE_OK) {
-      std::cout << "[HTTP Protocol Plugin]" << std::endl
-                << "[" << curl_easy_strerror(res)
-                << "] Unable to get " << uri << std::endl;
+      FIFU_LOG_INFO("(HTTP Protocol) Unable to get " + uri
+                    + "[Error " + curl_easy_strerror(res) + "]");
     }
 
     char* t;
     res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &t);
     if(res != CURLE_OK || !t) {
-      std::cout << "[HTTP Protocol Plugin]" << std::endl
-                << "[" << curl_easy_strerror(res)
-                << "] Unable to get content type for " << uri << std::endl;
-
+      FIFU_LOG_INFO("(HTTP Protocol) Unable to get congent type for " + uri
+                    + "[Error " + curl_easy_strerror(res) + "]");
       type = "";
     } else {
       type = t;
@@ -121,12 +118,7 @@ std::string HttpProtocol::installMapping(std::string uri)
 {
   std::string f_uri = createForeignUri(uri);
 
-  // Remove schema from uri
   if(f_uri.find(SCHEMA) == std::string::npos) {
-    std::cout << "[HTTP Protocol Plugin]" << std::endl
-              << " - Foreign URI (" << f_uri
-              << ") with an invalid schema"
-              << "(Original: " << uri << ")" << std::endl;
     return "";
   }
 
@@ -148,10 +140,8 @@ void HttpProtocol::startSender()
       return;
     }
 
-    std::cout << "[HTTP Protocol Plugin]"  << std::endl
-              << " - Processing next message in the queue ("
-              << out->getUri() << ")" << std::endl;
-
+    // Schedule message processing
+    FIFU_LOG_INFO("(HTTP Protocol) Scheduling next message (" + out->getUri() + ") processing");
     std::function<void()> func(std::bind(&HttpProtocol::processMessage, this, out));
     _tp.schedule(std::move(func));
   }
@@ -159,6 +149,8 @@ void HttpProtocol::startSender()
 
 void HttpProtocol::processMessage(MetaMessage* msg)
 {
+  FIFU_LOG_INFO("(HTTP Protocol) Processing message (" + msg->getUri() + ")");
+
   // Request content from the original network
   std::tuple<std::string, std::string> content = requestHttpUri(msg->getUri());
 
@@ -167,9 +159,7 @@ void HttpProtocol::processMessage(MetaMessage* msg)
   response->setUri(msg->getUri());
   response->setContent(std::get<0>(content), std::get<1>(content));
 
-  std::cout << "[HTTP Protocol Plugin]" << std::endl
-            << " Retrieving the response of " << msg->getUri()
-            << " to FIXP" << std::endl;
+  FIFU_LOG_INFO("(HTTP Protocol) Received response of " + msg->getUri());
   receivedMessage(response);
 
   // Release the kraken

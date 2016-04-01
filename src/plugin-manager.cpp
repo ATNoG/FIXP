@@ -16,6 +16,8 @@
  */
 
 #include "plugin-manager.hpp"
+
+#include "logger.hpp"
 #include "plugin-protocol-factory.hpp"
 #include "plugin-converter-factory.hpp"
 
@@ -54,14 +56,8 @@ void PluginManager::loadProtocol(std::string path,
   _protocols.emplace(std::piecewise_construct,
                      std::forward_as_tuple(protocol->getProtocol()),
                      std::forward_as_tuple(protocol));
-  std::cout << "[FIXP (PM)]" << std::endl
-            << " - Loading " << protocol->getProtocol()
-            << " protocol...done!" << std::endl;
-
   protocol->start();
-  std::cout << "[FIXP (PM)]" << std::endl
-            << " - Starting " << protocol->getProtocol()
-            << " protocol...done!" << std::endl;
+  FIFU_LOG_INFO("(PluginManager) Loaded & Started " + protocol->getProtocol() + " protocol");
 }
 
 void PluginManager::loadConverter(std::string path)
@@ -78,9 +74,7 @@ void PluginManager::loadConverter(std::string path)
   _converters.emplace(std::piecewise_construct,
                       std::forward_as_tuple(converter->getFileType()),
                       std::forward_as_tuple(converter));
-  std::cout << "[FIXP (PM)]" << std::endl
-            << " - Loading " << converter->getFileType()
-            << " converter...done!" << std::endl;
+  FIFU_LOG_INFO("(PluginManager) Loaded " + converter->getFileType() + " converter");
 }
 
 std::vector<std::string> PluginManager::installMapping(std::string uri)

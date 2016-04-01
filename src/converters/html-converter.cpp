@@ -16,6 +16,7 @@
  */
 
 #include "html-converter.hpp"
+#include "logger.hpp"
 
 #include <iostream>
 #include <regex>
@@ -38,9 +39,7 @@ HtmlConverter::extractUrisFromContent(std::string uri, std::string content)
   std::smatch match;
   std::regex expression("(href|src)=\"(.*?)\"");
   while(std::regex_search(content, match, expression)) {
-    std::cout << "[HTML Converter Plugin]" << std::endl
-              << " - Found URI in content: " << match[2].str()
-              << std::endl;
+    FIFU_LOG_INFO("(HTML Converter) Found " + match[2].str() + " resource in " + uri);
     uris.emplace(match[2].str(), uriToAbsoluteForm(match[2].str(), uri));
 
     content = match.suffix().str();
