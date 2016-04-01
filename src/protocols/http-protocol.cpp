@@ -19,6 +19,7 @@
 
 #include <boost/log/trivial.hpp>
 #include <curl/curl.h>
+#include <curl/multi.h>
 
 extern "C" HttpProtocol* create_plugin_object(boost::lockfree::queue<MetaMessage*>& queue)
 {
@@ -47,32 +48,58 @@ size_t getHttpContent(void *content, size_t size, size_t nmemb, std::string *dat
   return content_size;
 }
 
-std::string requestHttpUri(std::string uri)
+CURL* newConnection(std::string uri, std::string& content)
 {
   BOOST_LOG_TRIVIAL(trace) << "[HTTP Protocol Plugin]" << std::endl
-                           << " - Requesting" << uri << std::endl;
+                           << " - Creating connection to request "
+                           << uri << std::endl;
 
-  CURL *curl;
-  CURLcode res;
-  std::string content;
-
-  curl = curl_easy_init();
-  if(curl) {
-    curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, getHttpContent);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &content);
-
-    res = curl_easy_perform(curl);
-    if(res != CURLE_OK) {
-      BOOST_LOG_TRIVIAL(warning) << "[HTTP Protocol Plugin]" << std::endl
-                                 << "[" << curl_easy_strerror(res)
-                                 << "] Unable to get " << uri << std::endl;
-    }
-
-    curl_easy_cleanup(curl);
+  CURL* connection;
+  connection = curl_easy_init();
+  if(connection) {
+    curl_easy_setopt(connection, CURLOPT_URL, uri.c_str());
+    curl_easy_setopt(connection, CURLOPT_WRITEFUNCTION, getHttpContent);
+    curl_easy_setopt(connection, CURLOPT_WRITEDATA, &content);
   }
 
-  return content;
+  return connection;
+}
+
+size_t checkConnectionStatus(CURLM*& cm)
+{
+  int pendingRequests = -1;
+
+  CURLMcode mc;
+  fd_set fdread;
+  fd_set fdwrite;
+  fd_set fdexcep;
+
+  int maxfd = -1;
+  FD_ZERO(&fdread);
+  FD_ZERO(&fdwrite);
+  FD_ZERO(&fdexcep);
+
+  mc = curl_multi_fdset(cm, &fdread, &fdwrite, &fdexcep, &maxfd);
+  if(mc != CURLM_OK) {
+    BOOST_LOG_TRIVIAL(error) << "[Error Code " << mc
+                             << "] curl_multi_fdset() failed";
+    return -1;
+  }
+
+  // Calculate timeout
+  struct timeval timeout = { 0, 100 * 1000 }; // Default: 100ms
+  long curl_timeout = -1;
+  curl_multi_timeout(cm, &curl_timeout);
+  if(curl_timeout > 0) {
+    timeout.tv_sec = curl_timeout / 1000;
+    timeout.tv_usec = (curl_timeout % 1000) * 1000;
+  }
+
+  if(select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout) != -1) {
+    curl_multi_perform(cm, &pendingRequests);
+  }
+
+  return pendingRequests;
 }
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -122,30 +149,63 @@ void HttpProtocol::startReceiver()
 
 void HttpProtocol::startSender()
 {
-  MetaMessage* msg;
+  std::map<CURL*, MetaMessage*> connections;
+  CURLM* cm;
 
+  cm = curl_multi_init();
+
+  MetaMessage* msg;
   while(isRunning) {
-    while(_msg_to_send.pop(msg)) {
+    if(_msg_to_send.pop(msg)) {
       BOOST_LOG_TRIVIAL(trace) << "[HTTP Protocol Plugin]"  << std::endl
                                << " - Processing next message in the queue ("
                                << msg->_uri << ")" << std::endl;
 
-      // Request content from the original network
-      std::string contentPayload = requestHttpUri(msg->_uri);
+      MetaMessage* out = new MetaMessage();
+      out->_uri = msg->_uri;
 
-      // Send received response to Core
-      MetaMessage* in = new MetaMessage();
-      in->_uri = msg->_uri;
-      in->_contentPayload = contentPayload;
+      // Create new connection to send incoming message
+      CURL* connection = newConnection(msg->_uri, out->_contentPayload);
+      connections.emplace(connection, out);
+      curl_multi_add_handle(cm, connection);
 
-      BOOST_LOG_TRIVIAL(trace) << "[HTTP Protocol Plugin]" << std::endl
-                               << " Retrieving the response of " << msg->_uri
-                               << " to FIXP" << std::endl;
-      receivedMessage(in);
+      // Perform HTTP request
+      int tmp = -1;
+      curl_multi_perform(cm, &tmp);
 
       // Release the kraken
       delete msg;
     }
+
+    // Process responses to pending requests
+    // FIXME: handle errors
+    if(checkConnectionStatus(cm) == connections.size()) {
+      continue;
+    }
+
+    int msgs_left;
+    CURLMsg *cmsg;
+    while((cmsg = curl_multi_info_read(cm, &msgs_left))) {
+      if(cmsg->msg != CURLMSG_DONE) {
+        continue;
+      }
+
+      std::map<CURL*, MetaMessage*>::iterator it;
+      if((it = connections.find(cmsg->easy_handle)) != connections.end()) {
+        BOOST_LOG_TRIVIAL(trace) << "[HTTP Protocol Plugin]" << std::endl
+                                 << " Retrieving the response of " << it->second->_uri
+                                 << " to FIXP" << std::endl;
+
+        receivedMessage(it->second);
+        connections.erase(it);
+
+        // Clean up
+        curl_easy_cleanup(it->first);
+      }
+    }
   }
+
+  // Clean up
+  curl_multi_cleanup(cm);
 }
 
