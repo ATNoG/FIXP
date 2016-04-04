@@ -107,7 +107,11 @@ std::vector<std::string> PluginManager::installMapping(const std::string uri)
 
 std::shared_ptr<PluginProtocol> PluginManager::getProtocolPlugin(const std::string protocol)
 {
-  return _protocols.find(protocol)->second;
+  if(_protocols.find(protocol) != _protocols.end()) {
+    return _protocols.find(protocol)->second;
+  } else {
+    return std::shared_ptr<PluginProtocol>();
+  }
 }
 
 std::shared_ptr<PluginConverter> PluginManager::getConverterPlugin(const std::string fileType)

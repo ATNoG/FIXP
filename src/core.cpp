@@ -172,7 +172,13 @@ void Core::processMessage(const MetaMessage* msg)
     }
 
     // Send message to destination network architecture
-    pm.getProtocolPlugin(out->getUri().substr(0, out->getUri().find("://")))->sendMessage(out);
+    std::string out_schema_protocol = out->getUri().substr(0, out->getUri().find("://"));
+    std::shared_ptr<PluginProtocol> protocol = pm.getProtocolPlugin(out_schema_protocol);
+    if(protocol) {
+      protocol->sendMessage(out);
+    } else {
+      FIFU_LOG_WARN("(Core) Protocol endpoint for '" + out_schema_protocol + "' not found");
+    }
   }
 
   // Release the kraken
