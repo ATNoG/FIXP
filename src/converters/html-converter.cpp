@@ -54,12 +54,38 @@ std::string HtmlConverter::uriToAbsoluteForm(const std::string uri, const std::s
   if(uri.find("://") != std::string::npos)
     return uri;
 
+  std::string root = parent.substr(0, parent.find("/",
+                                                  parent.find(SCHEMA_DELIMITER)
+                                                     + sizeof(SCHEMA_DELIMITER)
+                                                 )
+                                  );
+
   std::string ret;
   if(uri[0] == '/') {
-    ret.append(parent.substr(0, parent.find("/", parent.find(SCHEMA_DELIMITER) + sizeof(SCHEMA_DELIMITER))))
+    // Relative from root
+    ret.append(root)
        .append(uri);
   } else {
-    ret.append(parent).append(parent[0] == '/' ? "" : "/").append(uri);
+    // Relative from current directory
+    std::string relativeFrom = root;
+
+    size_t pos;
+    if((pos = parent.rfind('/'), root.size() - 1) != std::string::npos) {
+      if(pos > root.size() - 1) {
+        relativeFrom = parent.substr(0, pos);
+      }
+    }
+
+    ret.append(relativeFrom)
+       .append("/")
+       .append(uri);
+  }
+
+  // Remove double slashes
+  for(size_t pos = ret.find("//", parent.find(SCHEMA_DELIMITER) + sizeof(SCHEMA_DELIMITER));
+      pos != std::string::npos;
+      pos = ret.find("//", pos)) {
+    ret.replace(pos, 2, "/");
   }
 
   return ret;
