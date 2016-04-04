@@ -20,6 +20,8 @@
 
 #include "logger.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <magic.h>
 #include <string>
 
@@ -48,6 +50,14 @@ std::string discoverContentType(const std::string content)
   magic_close(magic);
 
   return contentType;
+}
+
+std::string trimString(std::string str)
+{
+  str.erase(str.begin(), std::find_if(str.begin(), str.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+  str.erase(std::find_if(str.rbegin(), str.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), str.end());
+
+  return str;
 }
 
 #endif /* UTILS__HPP_ */

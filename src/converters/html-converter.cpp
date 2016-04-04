@@ -17,6 +17,7 @@
 
 #include "html-converter.hpp"
 #include "logger.hpp"
+#include "utils.hpp"
 
 #include <iostream>
 #include <regex>
@@ -37,12 +38,17 @@ HtmlConverter::extractUrisFromContent(const std::string uri, const std::string c
   std::map<std::string, std::string> uris;
 
   std::smatch match;
-  std::regex expression("(href|src)=\"(.*?)\"");
+  std::regex expression("(href|src)[[:space:]]*=[[:space:]]*(\"|'|`)(.*?)\\2",
+                        std::regex_constants::ECMAScript | std::regex_constants::icase);
 
   std::sregex_token_iterator end;
-  for(std::sregex_token_iterator i(content.begin(), content.end(), expression, 2); i != end; ++i) {
-    FIFU_LOG_INFO("(HTML Converter) Found " + i->str() + " resource in " + uri);
-    uris.emplace(i->str(), uriToAbsoluteForm(i->str(), uri));
+  for(std::sregex_token_iterator i(content.begin(), content.end(), expression, {2, 3}); i != end; ++i) {
+    std::string quote = i->str();
+    std::string e_uri = (++i)->str();
+    std::string trimmed_e_uri = trimString(e_uri);
+
+    FIFU_LOG_INFO("(HTML Converter) Found " + trimmed_e_uri + " resource in " + uri);
+    uris.emplace(quote + e_uri + quote, uriToAbsoluteForm(trimmed_e_uri, uri));
   }
 
   return uris;
@@ -99,8 +105,7 @@ HtmlConverter::convertContent(const std::string content,
   std::string tmp = content;
   for(auto& uris : mappings) {
     // Replace URI on the content
-    std::string o_uri;
-    o_uri.append("\"").append(uris.first).append("\"");
+    std::string o_uri = uris.first;
 
     std::string f_uri;
     f_uri.append("\"").append(uris.second).append("\"");
