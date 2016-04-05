@@ -22,14 +22,22 @@
 
 #include "../plugin.hpp"
 #include <ndn-cxx/face.hpp>
+#include <ndn-cxx/util/scheduler.hpp>
 
 using namespace ndn;
 
 class NdnPlugin : public Plugin
 {
+private:
+    boost::asio::io_service _io_service;
+    Face _face;
+    Scheduler _scheduler;
+
 public:
   NdnPlugin()
     : Plugin()
+    , _face(_io_service) // Create face with io_service object
+    , _scheduler(_io_service)
   { }
 
   void onData(const Interest& interest, const Data& data);
@@ -37,9 +45,11 @@ public:
 
   std::string getSchema() const { return "ndn"; }
   void processUri(const std::string uri);
+
 private:
-	Face _face;
+  void requestChunk(const Name& interest_name);
+  void onChunk(const Interest& interest, const Data& data);
+  void onChunkTimeout(const Interest& interest);
 };
 
 #endif /* NDN_PLUGIN__HPP_ */
-

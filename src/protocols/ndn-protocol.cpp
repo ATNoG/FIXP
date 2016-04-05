@@ -46,11 +46,28 @@ std::string createForeignUri(std::string o_uri)
 
   return f_uri;
 }
+
+std::string cleanName(Name name)
+{
+    int i = 0;
+    while (!(name[i].isVersion() ||
+             name[i].isTimestamp() ||
+             name[i].isSegment() ||
+             name[i].isSequenceNumber() ||
+             name[i].isSegmentOffset()))
+    {
+      i++;
+    }
+    return name.getPrefix(i).toUri();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 NdnProtocol::NdnProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
                          ThreadPool& tp)
     : PluginProtocol(queue, tp)
+    , _face(_io_service)
+    , _scheduler(_io_service)
 {
 }
 
@@ -94,41 +111,87 @@ std::string NdnProtocol::installMapping(const std::string uri)
 void NdnProtocol::onInterest(const InterestFilter& filter, const Interest& interest)
 {
   MetaMessage* in = new MetaMessage();
-  in->setUri(SCHEMA + interest.getName().toUri().substr(1, std::string::npos));
+
+  // Remove trailing Version and/or Segment Number
+  // TODO: Handle request for an specific chunk, handle request for specific version
+  std::string uri;
+  const Name interest_name(interest.getName());
+  if (interest_name[-1].isSegment())
+  {
+    uri = interest_name.getPrefix (interest_name.size ()-2).toUri().substr(1, std::string::npos);
+    return;
+  }
+  else if (interest_name[-1].isVersion())
+    uri = interest_name.getPrefix (interest_name.size ()-1).toUri().substr(1, std::string::npos);
+  else
+    uri = interest_name.toUri().substr(1, std::string::npos);
+
+  in->setUri(SCHEMA + uri);
   in->setMessageType(MESSAGE_TYPE_REQUEST);
 
   FIFU_LOG_INFO("(NDN Protocol) Received Interest message to " + in->getUri());
   receivedMessage(in);
 }
 
-void NdnProtocol::sendInterest(const std::string data_name)
+void NdnProtocol::sendInterest(const std::string interest_name)
 {
-  Interest interest(data_name);
+  Name name = Name(interest_name).appendVersion(0);
+  Interest interest(name);
   interest.setInterestLifetime(time::milliseconds(5000));
   interest.setMustBeFresh(true);
 
-  FIFU_LOG_INFO("(NDN Protocol) Sending Interest message to " + data_name);
+  FIFU_LOG_INFO("(NDN Protocol) Sending Interest message to " + interest_name);
   _face.expressInterest(interest,
                         bind(&NdnProtocol::onData, this,  _1, _2),
                         bind(&NdnProtocol::onTimeout, this, _1));
 
-  _face.processEvents();
+  FIFU_LOG_INFO("(NDN Protocol) ProcessEvents finished...");
 }
 
 void NdnProtocol::sendData(const std::string data_name, const std::string content)
 {
-  // Create Data packet
-  shared_ptr<Data> data = make_shared<Data>();
-  data->setName(data_name);
-  data->setFreshnessPeriod(time::seconds(10));
-  data->setContent(reinterpret_cast<const uint8_t*>(content.c_str()), content.size());
-
-  // Sign Data packet with default identity
-  _key_chain.sign(*data);
-
-  // Return Data packet to the requester
   FIFU_LOG_INFO("(NDN Protocol) Sending Data message to " + data_name);
-  _face.put(*data);
+
+  //Determine number of chunks
+  uint32_t chunk_count = 1 + (content.size() - 1) / MAX_CHUNK_SIZE;
+
+  if (chunk_count == 1)
+  {
+    // Create Data packet
+    shared_ptr<Data> data = make_shared<Data>();
+    data->setName(data_name);
+    data->setFreshnessPeriod(time::seconds(100));
+    data->setContent(reinterpret_cast<const uint8_t*>(content.c_str()), content.size());
+
+    // Sign Data packet with default identity
+    _key_chain.sign(*data);
+
+    // Return Data packet to the requester
+    _face.put(*data);
+  }
+  else
+  {
+    for (int i = 0; i < chunk_count; i++)
+    {
+      //Get chunk from content
+      uint32_t chunkLength = MAX_CHUNK_SIZE;
+      if (i == chunk_count - 1)
+        chunkLength = content.size() % MAX_CHUNK_SIZE;
+      std::string chunk = content.substr(i*MAX_CHUNK_SIZE,chunkLength);
+
+      //Prepare and send chunk of Data
+      shared_ptr<Data> data = make_shared<Data> (
+      //TODO: Define our own approach regarding versioning
+      Name(data_name).appendVersion(0).appendSegment(i)
+      );
+      data->setFreshnessPeriod (time::seconds(100));
+      data->setContent (reinterpret_cast<const uint8_t *>(chunk.c_str()),chunk.size());
+      data->setFinalBlockId (name::Component::fromSegment (chunk_count-1));
+      _key_chain.sign(*data);
+      _face.put (*data);
+      FIFU_LOG_INFO("Pushing Chunk " + data->getName().toUri());
+    }
+  }
 }
 
 void NdnProtocol::onRegisterFailed(const Name& prefix, const std::string& reason)
@@ -139,16 +202,86 @@ void NdnProtocol::onRegisterFailed(const Name& prefix, const std::string& reason
 
 void NdnProtocol::onData(const Interest& interest, const Data& data)
 {
-  Block content = data.getContent();
+  //Check whether it is a chunk or a complete data
+  if (data.getName()[-1].isSegment())
+    onChunk(interest,data);
+  else
+  {
+    Block content = data.getContent();
+    MetaMessage* in = new MetaMessage();
+    in->setUri(SCHEMA + cleanName(interest.getName()).substr(1, std::string::npos));
+    in->setMessageType(MESSAGE_TYPE_RESPONSE);
+    in->setContent("", std::string(reinterpret_cast<const char*>(content.value()),
+                                                                 content.value_size()));
+    FIFU_LOG_INFO("(NDN Protocol) Received Data message to " + in->getUri());
+    receivedMessage(in);
+  }
+}
 
-  MetaMessage* in = new MetaMessage();
-  in->setUri(SCHEMA + interest.getName().toUri().substr(1, std::string::npos));
-  in->setMessageType(MESSAGE_TYPE_RESPONSE);
-  in->setContent("", std::string(reinterpret_cast<const char*>(content.value()),
-                                                               content.value_size()));
+void NdnProtocol::requestChunk(const Name& interest_name)
+{
+  Interest interest(interest_name);
+  interest.setInterestLifetime(time::milliseconds(5000));
+  interest.setMustBeFresh(true);
 
-  FIFU_LOG_INFO("(NDN Protocol) Received Data message to " + in->getUri());
-  receivedMessage(in);
+  FIFU_LOG_INFO("(NDN Protocol) Requesting Chunk " + interest_name.toUri());
+  _face.expressInterest(interest,
+                        bind(&NdnProtocol::onChunk, this,  _1, _2),
+                        bind(&NdnProtocol::onChunkTimeout, this, _1));
+}
+
+void NdnProtocol::onChunk(const Interest& interest, const Data& data)
+{
+  const Name data_name = data.getName();
+  uint64_t chunk_no = data_name[-1].toSegment();
+  std::string content_name = cleanName(data_name);
+  uint64_t last_chunk_no = data.getFinalBlockId().toSegment();
+  std::cout << "Chunk " << chunk_no << "/" << last_chunk_no << std::endl;
+  auto it = _chunk_container.find(content_name);
+  if (chunk_no == 0)
+  {
+    _chunk_container[content_name] = std::string(reinterpret_cast<const char *>(data.getContent().value()),
+                                                       data.getContent().value_size());
+  }
+  else if(it != _chunk_container.end())
+  {
+    it->second += std::string(reinterpret_cast<const char *>(data.getContent().value()),
+                                                       data.getContent().value_size());
+  }
+  else
+      FIFU_LOG_ERROR("Something went wrong with the chunk container for " + content_name);
+
+  //TODO: For now lets assume FinalBlockId will be available in every chunk
+  it = _chunk_container.find(content_name);
+  if(chunk_no==last_chunk_no)
+  {
+    if(it != _chunk_container.end())
+    {
+      std::string content = it->second;
+      MetaMessage* in = new MetaMessage();
+      in->setUri(SCHEMA + content_name.substr(1, std::string::npos));
+      in->setMessageType(MESSAGE_TYPE_RESPONSE);
+      in->setContent("", content);
+      FIFU_LOG_INFO("(NDN Protocol) Received Data message to " + in->getUri());
+      receivedMessage(in);
+    }
+    else
+      FIFU_LOG_ERROR("Something went wrong with the chunk container for " + content_name);
+  }
+  else
+  {
+    const Name next_chunk = data_name.getPrefix(data_name.size() - 1)
+                                            .appendSegment(chunk_no + 1);
+    _scheduler.scheduleEvent(time::milliseconds(0),
+                            bind(&NdnProtocol::requestChunk, this, next_chunk));
+  }
+}
+
+void NdnProtocol::onChunkTimeout(const Interest& interest)
+{
+  FIFU_LOG_INFO("(NDN Protocol) Chunk request timeout to " +
+                std::string(SCHEMA) + interest.getName().toUri().substr(1, std::string::npos));
+  //TODO: handle retries
 }
 
 void NdnProtocol::onTimeout(const Interest& interest)
@@ -186,12 +319,12 @@ void NdnProtocol::processMessage(const MetaMessage* msg)
 
   if(msg->getMessageType() == MESSAGE_TYPE_REQUEST) {
     // Send Interest message
-    sendInterest(msg->getUri().substr(std::string(SCHEMA).size(),
+    sendInterest(msg->getUri().substr(std::string(SCHEMA).size() - 1,
                                       std::string::npos));
 
   } else if(msg->getMessageType() == MESSAGE_TYPE_RESPONSE) {
     // Send Data message
-    sendData(msg->getUri().substr(std::string(SCHEMA).size(),
+    sendData(msg->getUri().substr(std::string(SCHEMA).size() - 1,
                                   std::string::npos),
              msg->getContentData());
   }

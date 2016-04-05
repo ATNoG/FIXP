@@ -40,11 +40,50 @@ std::string removeSchemaFromUri(const std::string uri)
 
 void NdnPlugin::onData(const Interest& interest, const Data& data)
 {
-  std::cout << data << std::endl;
-  Block content = data.getContent();
-  std::cout << std::string(reinterpret_cast<const char*>(content.value()),
-                           content.value_size())
-  << std::endl;
+  //Check whether it is a chunk or a complete data
+  if (data.getName()[-1].isSegment())
+    onChunk(interest,data);
+  else
+  {
+    std::cout << data << std::endl;
+    Block content = data.getContent();
+    std::cout << std::string(reinterpret_cast<const char*>(content.value()),
+                             content.value_size())
+    << std::endl;
+  }
+}
+
+void NdnPlugin::requestChunk(const Name& interest_name)
+{
+  Interest interest(interest_name);
+  interest.setInterestLifetime(time::milliseconds(5000));
+  interest.setMustBeFresh(true);
+
+  _face.expressInterest(interest,
+                        bind(&NdnPlugin::onChunk, this,  _1, _2),
+                        bind(&NdnPlugin::onChunkTimeout, this, _1));
+
+}
+
+void NdnPlugin::onChunk(const Interest& interest, const Data& data)
+{
+
+  const Name & data_name = data.getName();
+  uint64_t chunk_no = data_name[-1].toSegment();
+  uint64_t last_chunk_no = data.getFinalBlockId().toSegment();
+  std::cout << std::string(reinterpret_cast<const char *>(data.getContent().value()),
+                                                       data.getContent().value_size());
+  //TODO: For now lets assume FinalBlockId will be available in every chunk
+  if(chunk_no!=last_chunk_no)
+  {
+    const Name next_chunk = data_name.getPrefix(data_name.size() - 1)
+                                            .appendSegment(chunk_no + 1);
+    // Schedule a new event
+    _scheduler.scheduleEvent(time::milliseconds(0),
+                              bind(&NdnPlugin::requestChunk, this, next_chunk));
+  }
+  else
+    std::cout << std::endl;
 }
 
 void NdnPlugin::onTimeout(const Interest& interest)
@@ -52,11 +91,16 @@ void NdnPlugin::onTimeout(const Interest& interest)
   std::cout << "Timeout" << interest << std::endl;
 }
 
+void NdnPlugin::onChunkTimeout(const Interest& interest)
+{
+  std::cout << "Chunk request timeout " << interest << std::endl;
+}
+
 void NdnPlugin::processUri(const std::string uri)
 {
   std::cout << "NdnPlugin requesting " << uri << std::endl << std::flush;
   Interest interest(Name(removeSchemaFromUri(uri)));
-  interest.setInterestLifetime(time::milliseconds(1000));
+  interest.setInterestLifetime(time::milliseconds(5000));
   interest.setMustBeFresh(true);
 
   _face.expressInterest(interest,
@@ -66,6 +110,5 @@ void NdnPlugin::processUri(const std::string uri)
   std::cout << "Sending " << interest << std::endl;
 
   // processEvents will block until the requested data received or timeout occurs
-  _face.processEvents();
+  _io_service.run();
 }
-

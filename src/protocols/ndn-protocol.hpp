@@ -25,23 +25,34 @@
 #include "thread-pool.hpp"
 
 #include <thread>
+#include <map>
 
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
+#include <ndn-cxx/util/scheduler.hpp>
 
 #define SCHEMA "ndn://"
 #define DEFAULT_PREFIX "fifu"
 
 using namespace ndn;
 
+static const uint32_t MAX_CHUNK_SIZE = ndn::MAX_NDN_PACKET_SIZE >> 1;
+// TODO: implement concurrent requests -> static const int MAX_CONCURRENT_INTERESTS = 3;
+// TODO: implement max retries -> static const int MAX_INTEREST_RETRIES = 3;
+
+typedef std::map <std::string, std::string> ChunkContainer;
+
 class NdnProtocol : public PluginProtocol
 {
 private:
+  boost::asio::io_service _io_service;
   std::thread _msg_receiver;
   std::thread _msg_sender;
   std::thread _listen;
   Face _face;
   KeyChain _key_chain;
+  Scheduler _scheduler;
+  ChunkContainer _chunk_container;
 
 public:
   NdnProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
@@ -66,7 +77,11 @@ private:
   void onData(const Interest& interest, const Data& data);
   void onTimeout(const Interest& interest);
 
-  void sendInterest(const std::string data_name);
+  void requestChunk(const Name& interest_name);
+  void onChunk(const Interest& interest, const Data& data);
+  void onChunkTimeout(const Interest& interest);
+
+  void sendInterest(const std::string interest_name);
   void sendData(const std::string data_name, const std::string content);
 };
 
