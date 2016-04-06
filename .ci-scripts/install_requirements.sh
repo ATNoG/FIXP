@@ -98,7 +98,8 @@ else
   git pull &&\
   ./waf &&\
   ./waf install &&\
-  find ./build/examples -type f -not -name "*.*" | xargs cp -t /usr/local/bin/
+  find ./build/examples -type f -not -name "*.*" | xargs cp -t /usr/local/bin/ &&\
+  ldconfig /usr/local/lib/libndn-cxx.so
 fi
 rc=$?
 if [ ! $rc -eq 0 ]; then
@@ -118,7 +119,8 @@ else
   cd $NDN_DIR/nfd &&\
   git pull &&\
   ./waf &&\
-  ./waf install
+  ./waf install &&\
+  cp /usr/local/etc/ndn/nfd.conf.sample /usr/local/etc/ndn/nfd.conf
 fi
 rc=$?
 if [ ! $rc -eq 0 ]; then
