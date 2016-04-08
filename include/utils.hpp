@@ -25,6 +25,7 @@
 #include <magic.h>
 #include <string>
 
+inline
 std::string discoverContentType(const std::string content)
 {
   magic_t magic = magic_open(MAGIC_MIME_TYPE | MAGIC_CONTINUE | MAGIC_CHECK);
@@ -52,6 +53,7 @@ std::string discoverContentType(const std::string content)
   return contentType;
 }
 
+inline
 std::string trimString(std::string str)
 {
   str.erase(str.begin(), std::find_if(str.begin(), str.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
