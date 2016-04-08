@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cctype>
 #include <magic.h>
+#include <stdlib.h>
 #include <string>
 
 inline
@@ -60,6 +61,20 @@ std::string trimString(std::string str)
   str.erase(std::find_if(str.rbegin(), str.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), str.end());
 
   return str;
+}
+
+inline
+std::string unescapeString(const std::string str)
+{
+  std::string res = str;
+
+  // Unescape string
+  size_t pos = 0;
+  while((pos = res.find("%", pos)) != std::string::npos) {
+    res.replace(pos, 3, 1, (char)(int)strtol(res.substr(pos + 1, 2).c_str(), NULL, 16));
+  }
+
+  return res;
 }
 
 #endif /* UTILS__HPP_ */

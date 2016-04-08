@@ -48,7 +48,8 @@ HtmlConverter::extractUrisFromContent(const std::string uri, const std::string c
     std::string trimmed_e_uri = trimString(e_uri);
 
     FIFU_LOG_INFO("(HTML Converter) Found " + trimmed_e_uri + " resource in " + uri);
-    uris.emplace(quote + e_uri + quote, uriToAbsoluteForm(trimmed_e_uri, uri));
+    uris.emplace(quote + e_uri + quote,
+                 unescapeString(uriToAbsoluteForm(trimmed_e_uri, uri)));
   }
 
   return uris;

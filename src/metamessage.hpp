@@ -18,6 +18,8 @@
 #ifndef META_MESSAGE__HPP_
 #define META_MESSAGE__HPP_
 
+#include "utils.hpp"
+
 #include <map>
 #include <string>
 #include <vector>
@@ -76,7 +78,7 @@ public:
 
   void setUri(const std::string uri)
   {
-    _uri = uri;
+    _uri = unescapeString(uri);
   }
 
   std::map<std::string, std::string> getMetadata() const
