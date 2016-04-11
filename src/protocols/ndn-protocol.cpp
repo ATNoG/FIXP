@@ -100,10 +100,10 @@ std::string NdnProtocol::installMapping(const std::string uri)
 {
   std::string f_uri = createForeignUri(uri);
 
-  _face.setInterestFilter(removeSchemaFromUri(f_uri),
-    bind(&NdnProtocol::onInterest, this, _1, _2),
-    RegisterPrefixSuccessCallback(),
-    bind(&NdnProtocol::onRegisterFailed, this, _1, _2));
+  _face.setInterestFilter(InterestFilter(removeSchemaFromUri(f_uri), ""),
+                          bind(&NdnProtocol::onInterest, this, _1, _2),
+                          RegisterPrefixSuccessCallback(),
+                          bind(&NdnProtocol::onRegisterFailed, this, _1, _2));
 
   return f_uri;
 }
