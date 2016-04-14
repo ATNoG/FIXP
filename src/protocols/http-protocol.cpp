@@ -167,13 +167,7 @@ void HttpProtocol::processMessage(const MetaMessage* msg)
 {
   FIFU_LOG_INFO("(HTTP Protocol) Processing message (" + msg->getUri() + ")");
 
-  std::string f_prefix;
-  f_prefix.append(SCHEMA).append(DEFAULT_HOSTNAME)
-          .append((HTTPD_PORT == 80 ? "" : ":" + std::to_string(HTTPD_PORT)));
-
-  if(msg->getUri().find(f_prefix) != std::string::npos) {
-    responseHttpUri(msg);
-  } else {
+  if(msg->getMessageType() == MESSAGE_TYPE_REQUEST) {
     // Request content from the original network
     std::tuple<std::string, std::string> content = requestHttpUri(msg->getUri());
 
@@ -185,6 +179,8 @@ void HttpProtocol::processMessage(const MetaMessage* msg)
 
     FIFU_LOG_INFO("(HTTP Protocol) Received response of " + msg->getUri());
     receivedMessage(response);
+  } else if(msg->getMessageType() == MESSAGE_TYPE_RESPONSE) {
+    responseHttpUri(msg);
   }
 
   // Release the kraken
