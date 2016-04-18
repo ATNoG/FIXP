@@ -25,7 +25,7 @@
 #include <microhttpd.h>
 #include <thread>
 
-#define SCHEMA "http://"
+#define SCHEMA "http"
 
 #define DEFAULT_HOSTNAME "127.0.0.1"
 #define HTTPD_PORT 8000
@@ -37,7 +37,7 @@ private:
   std::thread _msg_receiver;
   std::thread _msg_sender;
 
-  std::map<std::string, MHD_Connection*> pendingRequests;
+  std::map<Uri, MHD_Connection*> pendingRequests;
 
 public:
   HttpProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
@@ -47,7 +47,7 @@ public:
   void start();
   void stop();
 
-  std::string getProtocol() const { return "http"; };
+  std::string getProtocol() const { return SCHEMA; };
   std::string installMapping(const std::string uri);
 
 protected:

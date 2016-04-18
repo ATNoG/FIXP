@@ -19,6 +19,7 @@
 #define PLUGIN_MANAGER__HPP_
 
 #include "plugin.hpp"
+#include "uri.hpp"
 
 #include <map>
 #include <memory>
@@ -32,7 +33,7 @@ public:
   PluginManager() { };
 
   void loadPlugins(const std::string path_to_plugins);
-  void forwardUriToPlugin(const std::string uri) const;
+  void forwardUriToPlugin(const Uri uri) const;
 };
 
 #endif /* PLUGIN_MANAGER__HPP_ */

@@ -22,6 +22,8 @@
 
 #include <blackadder.hpp>
 
+#define SCHEMA "pursuit"
+
 class PursuitPlugin : public Plugin
 {
 public:
@@ -29,12 +31,12 @@ public:
     : Plugin()
   { }
 
-  std::string getSchema() const { return "pursuit"; }
-  void processUri(const std::string uri);
+  std::string getSchema() const { return SCHEMA; }
+  void processUri(const Uri uri);
 
 private:
-  int subscribe_item(const std::string uri);
-  int unsubscribe_item(const std::string uri);
+  int subscribe_item(const Uri uri);
+  int unsubscribe_item(const Uri uri);
 
   Blackadder *ba;
 };

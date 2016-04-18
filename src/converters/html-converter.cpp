@@ -32,10 +32,10 @@ extern "C" void destroy_object(HtmlConverter* object)
   delete object;
 }
 
-std::map<std::string, std::string>
-HtmlConverter::extractUrisFromContent(const std::string uri, const std::string content)
+std::map<std::string, Uri>
+HtmlConverter::extractUrisFromContent(const Uri uri, const std::string content)
 {
-  std::map<std::string, std::string> uris;
+  std::map<std::string, Uri> uris;
 
   std::smatch match;
   std::regex expression("(href|src)[[:space:]]*=[[:space:]]*(\"|'|`)(.*?)\\2",
@@ -47,60 +47,17 @@ HtmlConverter::extractUrisFromContent(const std::string uri, const std::string c
     std::string e_uri = (++i)->str();
     std::string trimmed_e_uri = trimString(e_uri);
 
-    FIFU_LOG_INFO("(HTML Converter) Found " + trimmed_e_uri + " resource in " + uri);
+    FIFU_LOG_INFO("(HTML Converter) Found " + trimmed_e_uri + " resource in " + uri.toString());
     uris.emplace(quote + e_uri + quote,
-                 unescapeString(uriToAbsoluteForm(trimmed_e_uri, uri)));
+                 Uri(uri, trimmed_e_uri));
   }
 
   return uris;
 }
 
-std::string HtmlConverter::uriToAbsoluteForm(const std::string uri, const std::string parent)
-{
-  // URI already is in absolute form
-  if(uri.find("://") != std::string::npos)
-    return uri;
-
-  std::string root = parent.substr(0, parent.find("/",
-                                                  parent.find(SCHEMA_DELIMITER)
-                                                     + sizeof(SCHEMA_DELIMITER)
-                                                 )
-                                  );
-
-  std::string ret;
-  if(uri[0] == '/') {
-    // Relative from root
-    ret.append(root)
-       .append(uri);
-  } else {
-    // Relative from current directory
-    std::string relativeFrom = root;
-
-    size_t pos;
-    if((pos = parent.rfind('/'), root.size() - 1) != std::string::npos) {
-      if(pos > root.size() - 1) {
-        relativeFrom = parent.substr(0, pos);
-      }
-    }
-
-    ret.append(relativeFrom)
-       .append("/")
-       .append(uri);
-  }
-
-  // Remove double slashes
-  for(size_t pos = ret.find("//", parent.find(SCHEMA_DELIMITER) + sizeof(SCHEMA_DELIMITER));
-      pos != std::string::npos;
-      pos = ret.find("//", pos)) {
-    ret.replace(pos, 2, "/");
-  }
-
-  return ret;
-}
-
 std::string
 HtmlConverter::convertContent(const std::string content,
-                              const std::map<std::string, std::string>& mappings)
+                              const std::map<std::string, Uri>& mappings)
 {
   // Adapt each URI to cope with foreign network
   std::string tmp = content;
@@ -109,7 +66,7 @@ HtmlConverter::convertContent(const std::string content,
     std::string o_uri = uris.first;
 
     std::string f_uri;
-    f_uri.append("\"").append(uris.second).append("\"");
+    f_uri.append("\"").append(uris.second.toString()).append("\"");
     for(size_t pos = 0;
         (pos = tmp.find(o_uri, pos)) != std::string::npos;
         pos += f_uri.size()) {

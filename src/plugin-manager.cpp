@@ -25,13 +25,6 @@
 #include <sys/stat.h>
 #include <thread>
 
-///////////////////////////////////////////////////////////////////////////////
-std::string extractSchema(const std::string uri)
-{
-  return uri.substr(0, uri.find("://"));
-}
-
-///////////////////////////////////////////////////////////////////////////////
 void PluginManager::stop()
 {
   // Stop protocol plugins
@@ -93,12 +86,12 @@ void PluginManager::loadConverter(const std::string path)
   }
 }
 
-std::vector<std::string> PluginManager::installMapping(const std::string uri)
+std::vector<Uri> PluginManager::installMapping(const Uri uri)
 {
-  std::vector<std::string> ret;
-  for (auto item : _protocols) {
-    if(item.first.compare(extractSchema(uri)) != 0) {
-      ret.push_back(item.second->installMapping(uri));
+  std::vector<Uri> ret;
+  for(auto& item : _protocols) {
+    if(item.first != uri.getSchema()) {
+      ret.push_back(item.second->installMapping(uri.toUriEncodedString()));
     }
   }
 

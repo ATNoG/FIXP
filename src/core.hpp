@@ -21,6 +21,7 @@
 #include "plugin-manager.hpp"
 #include "concurrent-blocking-queue.hpp"
 #include "thread-pool.hpp"
+#include "uri.hpp"
 
 #include <atomic>
 #include <map>
@@ -36,10 +37,10 @@ private:
   PluginManager pm;
   ThreadPool& _tp;
 
-  std::map<std::string, std::string> _mappings;
+  std::map<Uri, Uri> _mappings;
   mutable std::shared_timed_mutex _mappings_mutex;
 
-  std::map<std::string, std::vector<std::string>> _waiting_for_response;
+  std::map<Uri, std::vector<Uri>> _waiting_for_response;
   mutable std::shared_timed_mutex _waiting_for_response_mutex;
 
   ConcurrentBlockingQueue<const MetaMessage*> _queue;
@@ -58,7 +59,7 @@ public:
 
   void loadProtocol(const std::string path);
   void loadConverter(const std::string path);
-  std::vector<std::string> createMapping(const std::string o_uri);
+  std::vector<Uri> createMapping(const Uri o_uri);
 
 private:
   void processMessage(const MetaMessage* msg);

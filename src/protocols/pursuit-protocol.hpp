@@ -25,7 +25,7 @@
 #include <thread>
 #include <blackadder.hpp>
 
-#define SCHEMA "pursuit://"
+#define SCHEMA "pursuit"
 #define PURSUIT_ID_LEN_HEX_FORMAT 2 * PURSUIT_ID_LEN
 #define DEFAULT_SCOPE "0000000000000000"
 
@@ -44,7 +44,7 @@ public:
   void start();
   void stop();
 
-  std::string getProtocol() const { return "pursuit"; };
+  std::string getProtocol() const { return SCHEMA; };
   std::string installMapping(const std::string uri);
 
 protected:
@@ -56,8 +56,10 @@ private:
 
   int publishScope(const std::string name);
   int publishInfo(const std::string name);
-  int subscribe_uri(const std::string uri);
-  int unsubscribe_item(const std::string uri);
+
+  int publishUriContent(const Uri uri, void* content, size_t content_size);
+  int subscribeUri(const Uri uri);
+  int unsubscribeUri(const Uri uri);
 };
 
 #endif /* FP7_PURSUIT_PROTOCOL__HPP_ */

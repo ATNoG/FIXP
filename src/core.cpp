@@ -32,9 +32,9 @@ void Core::loadConverter(const std::string path)
   pm.loadConverter(path);
 }
 
-std::vector<std::string> Core::createMapping(const std::string o_uri)
+std::vector<Uri> Core::createMapping(const Uri o_uri)
 {
-  std::vector<std::string> f_uris;
+  std::vector<Uri> f_uris;
 
   std::unique_lock<std::shared_timed_mutex> lock(_mappings_mutex);
   for(auto& item : _mappings) {
@@ -48,9 +48,8 @@ std::vector<std::string> Core::createMapping(const std::string o_uri)
   }
 
   f_uris = pm.installMapping(o_uri);
-  for(auto f_uri : f_uris) {
-    //FIXME: handle empty strings
-    FIFU_LOG_INFO("(Core) New mapping: " + f_uri + " -> " + o_uri);
+  for(auto& f_uri : f_uris) {
+    FIFU_LOG_INFO("(Core) New mapping: " + f_uri.toString() + " -> " + o_uri.toString());
 
     _mappings.emplace(f_uri, o_uri);
   }
@@ -79,7 +78,7 @@ void Core::start()
     }
 
     // Schedule message processing
-    FIFU_LOG_INFO("(Core) Scheduling next message (" + in->getUri() + ") processing");
+    FIFU_LOG_INFO("(Core) Scheduling next message (" + in->getUriString() + ") processing");
     std::function<void()> func(std::bind(&Core::processMessage, this, in));
     _tp.schedule(std::move(func));
   }
@@ -87,8 +86,8 @@ void Core::start()
 
 void Core::processMessage(const MetaMessage* msg)
 {
-  FIFU_LOG_INFO("(Core) Processing message (" + msg->getUri() + ")");
-  std::vector<std::string> out_uris;
+  FIFU_LOG_INFO("(Core) Processing message (" + msg->getUriString() + ")");
+  std::vector<Uri> out_uris;
 
   // Begin: Locking scope
   {
@@ -106,7 +105,7 @@ void Core::processMessage(const MetaMessage* msg)
       if(it_wait != _waiting_for_response.end()) {
         it_wait->second.push_back(msg->getUri());
       } else {
-        std::vector<std::string> vec;
+        std::vector<Uri> vec;
         vec.push_back(msg->getUri());
         _waiting_for_response[it->second] = vec;
       }
@@ -128,13 +127,13 @@ void Core::processMessage(const MetaMessage* msg)
   } // End: Locking scope
 
   if(out_uris.size() == 0) {
-    FIFU_LOG_WARN("(Core) Mapping for " + msg->getUri() + " not found!");
+    FIFU_LOG_WARN("(Core) Mapping for " + msg->getUriString() + " not found!");
 
     delete msg;
     return;
   }
 
-  for(auto item : out_uris) {
+  for(auto& item : out_uris) {
     MetaMessage* out = new MetaMessage();
     out->setUri(item);
     out->setMetadata(msg->getMetadata());
@@ -142,21 +141,21 @@ void Core::processMessage(const MetaMessage* msg)
     std::string contentType = msg->getContentType();
     if(contentType == "") {
       contentType = discoverContentType(msg->getContentData());
-      FIFU_LOG_WARN("(Core) Detected content type (" + contentType +") of " + msg->getUri());
+      FIFU_LOG_WARN("(Core) Detected content type (" + contentType +") of " + msg->getUriString());
     }
 
     std::shared_ptr<PluginConverter> converter = pm.getConverterPlugin(contentType);
     if(converter) {
       // Extract existent URIs and create mappings to other architectures
-      std::map<std::string, std::string> uris;
+      std::map<std::string, Uri> uris;
       uris = converter->extractUrisFromContent(msg->getUri(), msg->getContentData());
 
-      std::map<std::string, std::string> mappings_for_convertion;
+      std::map<std::string, Uri> mappings_for_convertion;
       for(auto& o_uri : uris) {
-        std::vector<std::string> f_uris = createMapping(o_uri.second);
+        std::vector<Uri> f_uris = createMapping(o_uri.second);
 
         for(auto& f_uri : f_uris) {
-          if(f_uri.find(out->getUri().substr(0, out->getUri().find("://"))) != std::string::npos) {
+          if(f_uri.getSchema() == out->getUri().getSchema()) {
             mappings_for_convertion.emplace(o_uri.first, f_uri);
             break;
           }
@@ -172,12 +171,11 @@ void Core::processMessage(const MetaMessage* msg)
     }
 
     // Send message to destination network architecture
-    std::string out_schema_protocol = out->getUri().substr(0, out->getUri().find("://"));
-    std::shared_ptr<PluginProtocol> protocol = pm.getProtocolPlugin(out_schema_protocol);
+    std::shared_ptr<PluginProtocol> protocol = pm.getProtocolPlugin(out->getUri().getSchema());
     if(protocol) {
       protocol->sendMessage(out);
     } else {
-      FIFU_LOG_WARN("(Core) Protocol endpoint for '" + out_schema_protocol + "' not found");
+      FIFU_LOG_WARN("(Core) Protocol endpoint for '" + out->getUri().getSchema() + "' not found");
     }
   }
 

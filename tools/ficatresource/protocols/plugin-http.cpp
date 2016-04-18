@@ -23,8 +23,6 @@
 #include <iostream>
 #include <tuple>
 
-#define SCHEMA "http://"
-
 extern "C" HttpPlugin* create_plugin_object()
 {
   return new HttpPlugin;
@@ -84,9 +82,9 @@ const std::tuple<const std::string, const std::string> requestHttpUri(const std:
 }
 ///////////////////////////////////////////////////////////////////////////////
 
-void HttpPlugin::processUri(const std::string uri)
+void HttpPlugin::processUri(const Uri uri)
 {
-  std::tuple<std::string, std::string> contentTuple = requestHttpUri(uri);
+  std::tuple<std::string, std::string> contentTuple = requestHttpUri(uri.toString());
   std::string content = std::get<1>(contentTuple);
 
   size_t n = fwrite(content.c_str(), sizeof(char), content.size(), stdout);

@@ -24,6 +24,8 @@
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/util/scheduler.hpp>
 
+#define SCHEMA "ndn"
+
 using namespace ndn;
 
 class NdnPlugin : public Plugin
@@ -43,8 +45,8 @@ public:
   void onData(const Interest& interest, const Data& data);
   void onTimeout(const Interest& interest);
 
-  std::string getSchema() const { return "ndn"; }
-  void processUri(const std::string uri);
+  std::string getSchema() const { return SCHEMA; }
+  void processUri(const Uri uri);
 
 private:
   void requestChunk(const Name& interest_name);

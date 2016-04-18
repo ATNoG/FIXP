@@ -20,6 +20,8 @@
 
 #include "../plugin.hpp"
 
+#define SCHEMA "http"
+
 class HttpPlugin : public Plugin
 {
 public:
@@ -27,8 +29,8 @@ public:
     : Plugin()
   { }
 
-  std::string getSchema() const { return "http"; }
-  void processUri(const std::string uri);
+  std::string getSchema() const { return SCHEMA; }
+  void processUri(const Uri uri);
 };
 
 #endif /* HTTP_PLUGIN__HPP_ */

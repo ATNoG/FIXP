@@ -31,7 +31,7 @@
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/util/scheduler.hpp>
 
-#define SCHEMA "ndn://"
+#define SCHEMA "ndn"
 #define DEFAULT_PREFIX "fifu"
 
 using namespace ndn;
@@ -62,7 +62,7 @@ public:
   void start();
   void stop();
 
-  std::string getProtocol() const { return "ndn"; };
+  std::string getProtocol() const { return SCHEMA; };
   std::string installMapping(const std::string uri);
 
 protected:

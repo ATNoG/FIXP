@@ -40,7 +40,7 @@ std::string createForeignUri(std::string o_uri)
                                    reinterpret_cast<const byte*>(o_uri.c_str()),
                                    o_uri.size());
   std::string f_uri;
-  f_uri.append(SCHEMA).append(DEFAULT_SCOPE);
+  f_uri.append(SCHEMA).append(":").append(DEFAULT_SCOPE);
 
   f_uri += chararray_to_hex(std::string(reinterpret_cast<const char*>(hash),
                                    CryptoPP::SHA1::DIGESTSIZE))
@@ -84,12 +84,13 @@ void PursuitProtocol::stop()
 
 std::string PursuitProtocol::installMapping(const std::string uri)
 {
-  std::string f_uri = createForeignUri(uri);
+  Uri f_uri(createForeignUri(uri));
+  std::string uri_wo_schema = f_uri.toUriEncodedString().erase(0, strlen(SCHEMA) + 1);
 
   // Publish resource on the behalf of the original publisher
-  publishInfo(f_uri.substr(std::string(SCHEMA).size(), std::string::npos));
+  publishInfo(uri_wo_schema);
 
-  return f_uri;
+  return f_uri.toString();
 }
 
 void PursuitProtocol::startReceiver()
@@ -100,23 +101,23 @@ void PursuitProtocol::startReceiver()
     switch (ev.type) {
       case START_PUBLISH: {
         MetaMessage* in = new MetaMessage();
-        in->setUri(SCHEMA + chararray_to_hex(ev.id));
+        in->setUri(std::string(SCHEMA) + ":" + chararray_to_hex(ev.id));
         in->setMessageType(MESSAGE_TYPE_REQUEST);
 
-        FIFU_LOG_INFO("(PURSUIT Protocol) Received START_PUBLISH to " + in->getUri());
+        FIFU_LOG_INFO("(PURSUIT Protocol) Received START_PUBLISH to " + in->getUriString());
         receivedMessage(in);
       } break;
 
       case PUBLISHED_DATA: {
 
         MetaMessage* in = new MetaMessage();
-        in->setUri(SCHEMA + chararray_to_hex(ev.id));
+        in->setUri(std::string(SCHEMA) + ":" + chararray_to_hex(ev.id));
         in->setMessageType(MESSAGE_TYPE_RESPONSE);
         in->setContent("", std::string(reinterpret_cast<const char*>(ev.data),
                                                                      ev.data_len));
-        unsubscribe_item(in->getUri());
+        unsubscribeUri(in->getUri());
 
-        FIFU_LOG_INFO("(PURSUIT Protocol) Received START_PUBLISH to " + in->getUri());
+        FIFU_LOG_INFO("(PURSUIT Protocol) Received START_PUBLISH to " + in->getUriString());
         receivedMessage(in);
 
       } break;
@@ -136,7 +137,7 @@ void PursuitProtocol::startSender()
     }
 
     // Schedule message processing
-    FIFU_LOG_INFO("(PURSUIT Protocol) Scheduling next message (" + out->getUri() + ") processing");
+    FIFU_LOG_INFO("(PURSUIT Protocol) Scheduling next message (" + out->getUriString() + ") processing");
     std::function<void()> func(std::bind(&PursuitProtocol::processMessage, this, out));
     _tp.schedule(std::move(func));
   }
@@ -144,23 +145,15 @@ void PursuitProtocol::startSender()
 
 void PursuitProtocol::processMessage(const MetaMessage* msg)
 {
-  FIFU_LOG_INFO("(PURSUIT Protocol) Processing message (" + msg->getUri() + ")");
+  FIFU_LOG_INFO("(PURSUIT Protocol) Processing message (" + msg->getUriString() + ")");
 
   if(msg->getMessageType() == MESSAGE_TYPE_REQUEST) {
     // Subscribe URI
-    FIFU_LOG_INFO("(PURSUIT Protocol) Subscribing data related with " + msg->getUri());
-    subscribe_uri(msg->getUri());
+    subscribeUri(msg->getUri());
 
   } else if(msg->getMessageType() == MESSAGE_TYPE_RESPONSE) {
     // Start publishing data
-    FIFU_LOG_INFO("(PURSUIT Protocol) Publishing Data related with " + msg->getUri());
-    ba->publish_data(hex_to_chararray(msg->getUri().substr(std::string(SCHEMA).size(),
-                                                           std::string::npos)),
-                                      DOMAIN_LOCAL,
-                                      NULL,
-                                      0,
-                                      (void*) msg->getContentData().c_str(),
-                                      msg->getContentData().size());
+    publishUriContent(msg->getUri(), (void*) msg->getContentData().c_str(), msg->getContentData().size());
   }
 
   // Release the kraken
@@ -199,14 +192,30 @@ int PursuitProtocol::publishInfo(const std::string name)
   return 0;
 }
 
-int PursuitProtocol::subscribe_uri(const std::string uri)
+int PursuitProtocol::publishUriContent(const Uri uri, void* content, size_t content_size)
 {
-  std::string uri_wo_schema = uri.substr(std::string(SCHEMA).size());
+  std::string uri_wo_schema = uri.toUriEncodedString().erase(0, strlen(SCHEMA) + 1);
+
+  FIFU_LOG_INFO("(PURSUIT Protocol) Publishing Data related with " + uri.toString());
+  ba->publish_data(hex_to_chararray(uri_wo_schema),
+                   DOMAIN_LOCAL,
+                   NULL,
+                   0,
+                   content,
+                   content_size);
+
+  return 0;
+}
+
+int PursuitProtocol::subscribeUri(const Uri uri)
+{
+  std::string uri_wo_schema = uri.toUriEncodedString().erase(0, strlen(SCHEMA) + 1);
 
   size_t id_init_pos    = uri_wo_schema.size() - PURSUIT_ID_LEN_HEX_FORMAT;
   std::string prefix_id = uri_wo_schema.substr(0, id_init_pos);
   std::string id        = uri_wo_schema.substr(id_init_pos, PURSUIT_ID_LEN_HEX_FORMAT);
 
+  FIFU_LOG_INFO("(PURSUIT Protocol) Subscribing data related with " + uri.toString());
   ba->subscribe_info(hex_to_chararray(id),
                      hex_to_chararray(prefix_id),
                      DOMAIN_LOCAL,
@@ -216,14 +225,15 @@ int PursuitProtocol::subscribe_uri(const std::string uri)
   return 0;
 }
 
-int PursuitProtocol::unsubscribe_item(const std::string uri)
+int PursuitProtocol::unsubscribeUri(const Uri uri)
 {
-  std::string uri_wo_schema = uri.substr(std::string(SCHEMA).size());
+  std::string uri_wo_schema = uri.toUriEncodedString().erase(0, strlen(SCHEMA) + 1);
 
   size_t id_init_pos    = uri_wo_schema.size() - PURSUIT_ID_LEN_HEX_FORMAT;
   std::string prefix_id = uri_wo_schema.substr(0, id_init_pos);
   std::string id        = uri_wo_schema.substr(id_init_pos, PURSUIT_ID_LEN_HEX_FORMAT);
 
+  FIFU_LOG_INFO("(PURSUIT Protocol) Unsubscribing data related with " + uri.toString());
   ba->unsubscribe_info(hex_to_chararray(id),
                        hex_to_chararray(prefix_id),
                        DOMAIN_LOCAL,

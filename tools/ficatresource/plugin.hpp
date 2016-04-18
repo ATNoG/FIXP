@@ -18,6 +18,8 @@
 #ifndef PLUGIN__HPP_
 #define PLUGIN__HPP_
 
+#include "uri.hpp"
+
 #include <string>
 
 class Plugin
@@ -27,7 +29,7 @@ public:
   ~Plugin() { };
 
   virtual std::string getSchema() const = 0;
-  virtual void processUri(const std::string uri) = 0;
+  virtual void processUri(const Uri uri) = 0;
 };
 
 #endif /* PLUGIN__HPP_ */

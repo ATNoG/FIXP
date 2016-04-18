@@ -21,6 +21,7 @@
 #include "plugin-protocol.hpp"
 #include "plugin-converter.hpp"
 #include "concurrent-blocking-queue.hpp"
+#include "uri.hpp"
 #include "thread-pool.hpp"
 
 #include <map>
@@ -61,7 +62,7 @@ public:
                     ThreadPool& tp);
   void loadConverter(const std::string path);
 
-  std::vector<std::string> installMapping(const std::string uri);
+  std::vector<Uri> installMapping(const Uri uri);
   std::shared_ptr<PluginProtocol> getProtocolPlugin(const std::string protocol);
   std::shared_ptr<PluginConverter> getConverterPlugin(const std::string fileType);
 };

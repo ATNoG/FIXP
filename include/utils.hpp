@@ -22,7 +22,9 @@
 
 #include <algorithm>
 #include <cctype>
+#include <iomanip>
 #include <magic.h>
+#include <sstream>
 #include <stdlib.h>
 #include <string>
 
@@ -61,6 +63,23 @@ std::string trimString(std::string str)
   str.erase(std::find_if(str.rbegin(), str.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), str.end());
 
   return str;
+}
+
+inline
+std::string escapeString(const std::string str)
+{
+  std::ostringstream ret;
+  ret << std::setfill('0') << std::hex;
+
+  for(const char& c : str) {
+    if(std::isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~') {
+      ret << std::nouppercase << c;
+    } else {
+      ret << std::uppercase << '%' << std::setw(2) << int((unsigned char) c);
+    }
+  }
+
+  return ret.str();
 }
 
 inline

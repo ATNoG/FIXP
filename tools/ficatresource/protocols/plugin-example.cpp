@@ -29,8 +29,8 @@ extern "C" void destroy_object(ExamplePlugin* object)
   delete object;
 }
 
-void ExamplePlugin::processUri(const std::string uri)
+void ExamplePlugin::processUri(const Uri uri)
 {
-  std::cout << "ExamplePlugin requesting " << uri << std::endl << std::flush;
+  std::cout << "ExamplePlugin requesting " << uri.toString() << std::endl << std::flush;
 }
 

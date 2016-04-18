@@ -44,13 +44,11 @@ void PluginManager::loadPlugins(const std::string path_to_plugins)
   }
 }
 
-void PluginManager::forwardUriToPlugin(const std::string uri) const
+void PluginManager::forwardUriToPlugin(const Uri uri) const
 {
-  std::string schema = uri.substr(0, uri.find("://"));
-
   try {
-    std::shared_ptr<Plugin> plugin = _plugins.at(schema);
-    plugin->processUri(uri);
+    std::shared_ptr<Plugin> plugin = _plugins.at(uri.getSchema());
+    plugin->processUri(uri.toString());
   } catch(std::out_of_range& e) {
     std::cerr << "Error: schema not support!" << std::endl << std::flush;
   }

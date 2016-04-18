@@ -32,17 +32,23 @@ extern "C" void destroy_object(NdnProtocol* object)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-std::string removeSchemaFromUri(std::string uri)
-{
-  std::string schema_division = "://";
-  size_t pos = uri.find(schema_division); //TODO: Schema division not found
-  return "/" + uri.substr(pos+schema_division.length());
-}
-
 std::string createForeignUri(std::string o_uri)
 {
+  Uri uri(o_uri);
+
   std::string f_uri;
-  f_uri.append(SCHEMA).append(DEFAULT_PREFIX).append(removeSchemaFromUri(o_uri));
+  f_uri.append(SCHEMA).append(":")
+       .append("/").append(DEFAULT_PREFIX);
+
+  if(uri.getAuthority() != "") {
+    f_uri.append("/").append(uri.getAuthority());
+  }
+
+  f_uri.append(uri.getPath())
+       .append(escapeString("?"))
+       .append(uri.getUriEncodedQuery())
+       .append(escapeString("#"))
+       .append(uri.getUriEncodedFragment());
 
   return f_uri;
 }
@@ -98,14 +104,15 @@ void NdnProtocol::stop()
 
 std::string NdnProtocol::installMapping(const std::string uri)
 {
-  std::string f_uri = createForeignUri(uri);
+  Uri f_uri(createForeignUri(uri));
+  std::string uri_wo_schema = f_uri.toUriEncodedString().erase(0, strlen(SCHEMA) + 1);
 
-  _face.setInterestFilter(InterestFilter(removeSchemaFromUri(f_uri), ""),
+  _face.setInterestFilter(InterestFilter(uri_wo_schema, ""),
                           bind(&NdnProtocol::onInterest, this, _1, _2),
                           RegisterPrefixSuccessCallback(),
                           bind(&NdnProtocol::onRegisterFailed, this, _1, _2));
 
-  return f_uri;
+  return f_uri.toString();
 }
 
 void NdnProtocol::onInterest(const InterestFilter& filter, const Interest& interest)
@@ -118,18 +125,18 @@ void NdnProtocol::onInterest(const InterestFilter& filter, const Interest& inter
   const Name interest_name(interest.getName());
   if (interest_name[-1].isSegment())
   {
-    uri = interest_name.getPrefix (interest_name.size ()-2).toUri().substr(1, std::string::npos);
+    uri = interest_name.getPrefix (interest_name.size ()-2).toUri();
     return;
   }
   else if (interest_name[-1].isVersion())
-    uri = interest_name.getPrefix (interest_name.size ()-1).toUri().substr(1, std::string::npos);
+    uri = interest_name.getPrefix (interest_name.size ()-1).toUri();
   else
-    uri = interest_name.toUri().substr(1, std::string::npos);
+    uri = interest_name.toUri();
 
-  in->setUri(SCHEMA + uri);
+  in->setUri(std::string(SCHEMA) + ":" + uri);
   in->setMessageType(MESSAGE_TYPE_REQUEST);
 
-  FIFU_LOG_INFO("(NDN Protocol) Received Interest message to " + in->getUri());
+  FIFU_LOG_INFO("(NDN Protocol) Received Interest message to " + in->getUriString());
   receivedMessage(in);
 }
 
@@ -209,11 +216,11 @@ void NdnProtocol::onData(const Interest& interest, const Data& data)
   {
     Block content = data.getContent();
     MetaMessage* in = new MetaMessage();
-    in->setUri(SCHEMA + cleanName(interest.getName()).substr(1, std::string::npos));
+    in->setUri(std::string(SCHEMA) + ":" + cleanName(interest.getName()));
     in->setMessageType(MESSAGE_TYPE_RESPONSE);
     in->setContent("", std::string(reinterpret_cast<const char*>(content.value()),
                                                                  content.value_size()));
-    FIFU_LOG_INFO("(NDN Protocol) Received Data message to " + in->getUri());
+    FIFU_LOG_INFO("(NDN Protocol) Received Data message to " + in->getUriString());
     receivedMessage(in);
   }
 }
@@ -259,10 +266,10 @@ void NdnProtocol::onChunk(const Interest& interest, const Data& data)
     {
       std::string content = it->second;
       MetaMessage* in = new MetaMessage();
-      in->setUri(SCHEMA + content_name.substr(1, std::string::npos));
+      in->setUri(std::string(SCHEMA) + ":" + content_name);
       in->setMessageType(MESSAGE_TYPE_RESPONSE);
       in->setContent("", content);
-      FIFU_LOG_INFO("(NDN Protocol) Received Data message to " + in->getUri());
+      FIFU_LOG_INFO("(NDN Protocol) Received Data message to " + in->getUriString());
       receivedMessage(in);
     }
     else
@@ -280,14 +287,14 @@ void NdnProtocol::onChunk(const Interest& interest, const Data& data)
 void NdnProtocol::onChunkTimeout(const Interest& interest)
 {
   FIFU_LOG_INFO("(NDN Protocol) Chunk request timeout to " +
-                std::string(SCHEMA) + interest.getName().toUri().substr(1, std::string::npos));
+                std::string(SCHEMA) + ":" + interest.getName().toUri());
   //TODO: handle retries
 }
 
 void NdnProtocol::onTimeout(const Interest& interest)
 {
   FIFU_LOG_INFO("(NDN Protocol) Interest timeout to " +
-                std::string(SCHEMA) + interest.getName().toUri().substr(1, std::string::npos));
+                std::string(SCHEMA) + ":" + interest.getName().toUri());
 }
 
 void NdnProtocol::startReceiver()
@@ -307,7 +314,7 @@ void NdnProtocol::startSender()
     }
 
     // Schedule message processing
-    FIFU_LOG_INFO("(NDN Protocol) Scheduling next message (" + out->getUri() + ") processing");
+    FIFU_LOG_INFO("(NDN Protocol) Scheduling next message (" + out->getUriString() + ") processing");
     std::function<void()> func(std::bind(&NdnProtocol::processMessage, this, out));
     _tp.schedule(std::move(func));
   }
@@ -315,17 +322,15 @@ void NdnProtocol::startSender()
 
 void NdnProtocol::processMessage(const MetaMessage* msg)
 {
-  FIFU_LOG_INFO("(NDN Protocol) Processing message (" + msg->getUri() + ")");
+  FIFU_LOG_INFO("(NDN Protocol) Processing message (" + msg->getUriString() + ")");
+  std::string uri_wo_schema = msg->getEncodedUriString().erase(0, strlen(SCHEMA) + 1);
 
   if(msg->getMessageType() == MESSAGE_TYPE_REQUEST) {
     // Send Interest message
-    sendInterest(msg->getUri().substr(std::string(SCHEMA).size() - 1,
-                                      std::string::npos));
+    sendInterest(uri_wo_schema);
 
   } else if(msg->getMessageType() == MESSAGE_TYPE_RESPONSE) {
     // Send Data message
-    sendData(msg->getUri().substr(std::string(SCHEMA).size() - 1,
-                                  std::string::npos),
-             msg->getContentData());
+    sendData(uri_wo_schema, msg->getContentData());
   }
 }

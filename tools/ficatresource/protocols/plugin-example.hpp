@@ -28,7 +28,7 @@ public:
   { }
 
   std::string getSchema() const { return "example"; }
-  void processUri(const std::string uri);
+  void processUri(const Uri uri);
 };
 
 #endif /* EXAMPLE_PLUGIN__HPP_ */

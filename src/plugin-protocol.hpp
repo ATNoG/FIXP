@@ -21,6 +21,7 @@
 #include "metamessage.hpp"
 #include "concurrent-blocking-queue.hpp"
 #include "thread-pool.hpp"
+#include "uri.hpp"
 
 #include <atomic>
 #include <map>

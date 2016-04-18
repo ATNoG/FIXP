@@ -19,6 +19,7 @@
 #define PLUGIN_CONVERTER__HPP_
 
 #include "metamessage.hpp"
+#include "uri.hpp"
 
 #include <map>
 #include <vector>
@@ -30,9 +31,8 @@ public:
   ~PluginConverter() { };
 
   virtual std::vector<std::string> getFileTypes() const = 0;
-  virtual std::map<std::string, std::string> extractUrisFromContent(const std::string uri, const std::string content) = 0;
-  virtual std::string uriToAbsoluteForm(const std::string uri, const std::string parent) = 0;
-  virtual std::string convertContent(const std::string content, const std::map<std::string, std::string>& mappings) = 0;
+  virtual std::map<std::string, Uri> extractUrisFromContent(const Uri uri, const std::string content) = 0;
+  virtual std::string convertContent(const std::string content, const std::map<std::string, Uri>& mappings) = 0;
 };
 
 #endif /* PLUGIN_CONVERTER__HPP_ */

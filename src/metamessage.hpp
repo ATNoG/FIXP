@@ -19,6 +19,7 @@
 #define META_MESSAGE__HPP_
 
 #include "utils.hpp"
+#include "uri.hpp"
 
 #include <map>
 #include <string>
@@ -45,7 +46,7 @@ public:
 class MetaMessage
 {
 private:
-  std::string _uri;
+  Uri _uri;
   std::map<std::string, std::string> _metadata;
   Content _content;
 
@@ -71,14 +72,29 @@ public:
     _content._data = data;
   }
 
-  std::string getUri() const
+  Uri getUri() const
   {
     return _uri;
   }
 
+  std::string getUriString() const
+  {
+    return _uri.toString();
+  }
+
+  std::string getEncodedUriString() const
+  {
+    return _uri.toUriEncodedString();
+  }
+
+  void setUri(const Uri uri)
+  {
+    _uri = uri;
+  }
+
   void setUri(const std::string uri)
   {
-    _uri = unescapeString(uri);
+    _uri.setUri(uri);
   }
 
   std::map<std::string, std::string> getMetadata() const

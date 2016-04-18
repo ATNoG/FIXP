@@ -20,8 +20,6 @@
 
 #include "../plugin-converter.hpp"
 
-#define SCHEMA_DELIMITER "://"
-
 class HtmlConverter : public PluginConverter
 {
 public:
@@ -29,9 +27,8 @@ public:
   ~HtmlConverter() { };
 
   std::vector<std::string> getFileTypes() const { return {"text/html"}; };
-  std::map<std::string, std::string> extractUrisFromContent(const std::string uri, const std::string content);
-  std::string uriToAbsoluteForm(const std::string uri, const std::string parent);
-  std::string convertContent(const std::string content, const std::map<std::string, std::string>& mappings);
+  std::map<std::string, Uri> extractUrisFromContent(const Uri uri, const std::string content);
+  std::string convertContent(const std::string content, const std::map<std::string, Uri>& mappings);
 };
 
 #endif /* HTML_CONVERTER__HPP_ */

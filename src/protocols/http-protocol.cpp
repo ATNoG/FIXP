@@ -34,17 +34,17 @@ extern "C" void destroy_object(HttpProtocol* object)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-std::string removeSchemaFromUri(std::string uri)
-{
-  std::string schema_division = "://";
-  size_t pos = uri.find(schema_division); //TODO: Schema division not found
-  return uri.substr(pos + schema_division.length());
-}
-
 std::string createForeignUri(std::string o_uri)
 {
-  return std::string(SCHEMA) + DEFAULT_HOSTNAME + (HTTPD_PORT == 80 ? "" : ":" + std::to_string(HTTPD_PORT))
-          + "/" + removeSchemaFromUri(o_uri);
+  Uri uri(o_uri);
+
+  return std::string(SCHEMA) + ":"
+          + "//" + DEFAULT_HOSTNAME
+          + (HTTPD_PORT == 80 ? "" : ":" + std::to_string(HTTPD_PORT))
+          + (uri.getAuthority().size() != 0 ? "/" + uri.getAuthority() : "")
+          + uri.getPath()
+          + (uri.getQuery().size() != 0 ? "?" + uri.getQuery() : "")
+          + (uri.getFragment().size() != 0 ? "#" + uri.getFragment() : "");
 }
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -126,13 +126,7 @@ void HttpProtocol::start()
 
 std::string HttpProtocol::installMapping(const std::string uri)
 {
-  std::string f_uri = createForeignUri(uri);
-
-  if(f_uri.find(SCHEMA) == std::string::npos) {
-    return "";
-  }
-
-  return f_uri;
+  return createForeignUri(uri);
 }
 
 void HttpProtocol::startReceiver()
@@ -157,7 +151,7 @@ void HttpProtocol::startSender()
     }
 
     // Schedule message processing
-    FIFU_LOG_INFO("(HTTP Protocol) Scheduling next message (" + out->getUri() + ") processing");
+    FIFU_LOG_INFO("(HTTP Protocol) Scheduling next message (" + out->getUriString() + ") processing");
     std::function<void()> func(std::bind(&HttpProtocol::processMessage, this, out));
     _tp.schedule(std::move(func));
   }
@@ -165,11 +159,11 @@ void HttpProtocol::startSender()
 
 void HttpProtocol::processMessage(const MetaMessage* msg)
 {
-  FIFU_LOG_INFO("(HTTP Protocol) Processing message (" + msg->getUri() + ")");
+  FIFU_LOG_INFO("(HTTP Protocol) Processing message (" + msg->getUriString() + ")");
 
   if(msg->getMessageType() == MESSAGE_TYPE_REQUEST) {
     // Request content from the original network
-    std::tuple<std::string, std::string> content = requestHttpUri(msg->getUri());
+    std::tuple<std::string, std::string> content = requestHttpUri(msg->getUriString());
 
     // Send received response to Core
     MetaMessage* response = new MetaMessage();
@@ -177,7 +171,7 @@ void HttpProtocol::processMessage(const MetaMessage* msg)
     response->setMessageType(MESSAGE_TYPE_RESPONSE);
     response->setContent(std::get<0>(content), std::get<1>(content));
 
-    FIFU_LOG_INFO("(HTTP Protocol) Received response of " + msg->getUri());
+    FIFU_LOG_INFO("(HTTP Protocol) Received response of " + msg->getUriString());
     receivedMessage(response);
   } else if(msg->getMessageType() == MESSAGE_TYPE_RESPONSE) {
     responseHttpUri(msg);
@@ -218,12 +212,18 @@ int HttpProtocol::answer_to_connection(struct MHD_Connection *connection,
                                        const char *upload_data,
                                        size_t *upload_data_size, void **con_cls)
 {
+  const char* host = MHD_lookup_connection_value(connection, MHD_HEADER_KIND, "Host");
+  if(host == NULL) {
+    FIFU_LOG_WARN("(HTTP Protocol) Unable to find host parameter. Discarding received message...");
+    // FIXME: Send 400 (Bad Request)
+    return MHD_YES;
+  }
+
   MetaMessage* in = new MetaMessage();
-  const char* value = MHD_lookup_connection_value(connection, MHD_HEADER_KIND, "Host");
-  in->setUri(std::string(SCHEMA) + value + url);
+  in->setUri(std::string(SCHEMA) + ":" + "//" + host + url);
   in->setMessageType(MESSAGE_TYPE_REQUEST);
 
-  FIFU_LOG_INFO("(HTTP Protocol) Received GET request to " + in->getUri());
+  FIFU_LOG_INFO("(HTTP Protocol) Received GET request to " + in->getUriString());
   pendingRequests.emplace(in->getUri(), connection);
   MHD_suspend_connection(connection);
 
@@ -253,9 +253,9 @@ void HttpProtocol::responseHttpUri(const MetaMessage* msg)
   MHD_resume_connection(connection);
   int ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
   if(ret == MHD_YES) {
-    FIFU_LOG_INFO("(HTTP Protocol) Sending the response message of " + msg->getUri());
+    FIFU_LOG_INFO("(HTTP Protocol) Sending the response message of " + msg->getUriString());
   } else {
-    FIFU_LOG_INFO("(HTTP Protocol) Failed to send response message of " + msg->getUri());
+    FIFU_LOG_INFO("(HTTP Protocol) Failed to send response message of " + msg->getUriString());
   }
 
   MHD_destroy_response(response);

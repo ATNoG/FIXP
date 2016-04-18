@@ -20,7 +20,6 @@
 #include <fstream>
 
 #define PURSUIT_ID_LEN_HEX_FORMAT 2 * PURSUIT_ID_LEN
-#define SCHEMA "pursuit://"
 
 extern "C" PursuitPlugin* create_plugin_object()
 {
@@ -32,9 +31,9 @@ extern "C" void destroy_object(PursuitPlugin* object)
   delete object;
 }
 
-int PursuitPlugin::subscribe_item(const std::string uri)
+int PursuitPlugin::subscribe_item(const Uri uri)
 {
-  std::string uri_wo_schema = uri.substr(std::string(SCHEMA).size());
+  std::string uri_wo_schema = uri.toString().erase(0, strlen(SCHEMA) + 1);
 
   size_t id_init_pos    = uri_wo_schema.size() - PURSUIT_ID_LEN_HEX_FORMAT;
   std::string prefix_id = uri_wo_schema.substr(0, id_init_pos);
@@ -49,9 +48,9 @@ int PursuitPlugin::subscribe_item(const std::string uri)
   return 0;
 }
 
-int PursuitPlugin::unsubscribe_item(const std::string uri)
+int PursuitPlugin::unsubscribe_item(const Uri uri)
 {
-  std::string uri_wo_schema = uri.substr(std::string(SCHEMA).size());
+  std::string uri_wo_schema = uri.toString().erase(0, strlen(SCHEMA) + 1);
 
   size_t id_init_pos    = uri_wo_schema.size() - PURSUIT_ID_LEN_HEX_FORMAT;
   std::string prefix_id = uri_wo_schema.substr(0, id_init_pos);
@@ -66,7 +65,7 @@ int PursuitPlugin::unsubscribe_item(const std::string uri)
   return 0;
 }
 
-void PursuitPlugin::processUri(const std::string uri)
+void PursuitPlugin::processUri(const Uri uri)
 {
   ba = Blackadder::Instance(true);
 
