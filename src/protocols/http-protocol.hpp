@@ -37,7 +37,7 @@ private:
   std::thread _msg_receiver;
   std::thread _msg_sender;
 
-  std::map<Uri, MHD_Connection*> pendingRequests;
+  std::map<Uri, MHD_Connection*> pendingConnections;
 
 public:
   HttpProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,

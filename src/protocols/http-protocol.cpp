@@ -228,7 +228,7 @@ int HttpProtocol::answer_to_connection(struct MHD_Connection *connection,
   in->setMessageType(MESSAGE_TYPE_REQUEST);
 
   FIFU_LOG_INFO("(HTTP Protocol) Received GET request to " + in->getUriString());
-  pendingRequests.emplace(in->getUri(), connection);
+  pendingConnections.emplace(in->getUri(), connection);
   MHD_suspend_connection(connection);
 
   receivedMessage(in);
@@ -239,8 +239,8 @@ int HttpProtocol::answer_to_connection(struct MHD_Connection *connection,
 void HttpProtocol::responseHttpUri(const MetaMessage* msg)
 {
   // Get pending connection
-  auto it = pendingRequests.find(msg->getUri());
-  if(it == pendingRequests.end()) {
+  auto it = pendingConnections.find(msg->getUri());
+  if(it == pendingConnections.end()) {
     return;
   }
 
@@ -248,7 +248,7 @@ void HttpProtocol::responseHttpUri(const MetaMessage* msg)
     return;
   }
   struct MHD_Connection* connection = it->second;
-  pendingRequests.erase(it);
+  pendingConnections.erase(it);
 
   struct MHD_Response* response;
   response = MHD_create_response_from_buffer(msg->getContentData().size(), (void*) msg->getContentData().c_str(), MHD_RESPMEM_PERSISTENT);
