@@ -98,6 +98,18 @@ std::vector<Uri> PluginManager::installMapping(const Uri uri)
   return ret;
 }
 
+Uri PluginManager::installMapping(const Uri uri, const std::string protocol)
+{
+  std::string ret = "";
+
+  auto item = _protocols.find(protocol);
+  if(item != _protocols.end()) {
+    ret = item->second->installMapping(uri.toUriEncodedString());
+  }
+
+  return ret;
+}
+
 std::shared_ptr<PluginProtocol> PluginManager::getProtocolPlugin(const std::string protocol)
 {
   if(_protocols.find(protocol) != _protocols.end()) {
@@ -115,3 +127,14 @@ std::shared_ptr<PluginConverter> PluginManager::getConverterPlugin(const std::st
     return std::shared_ptr<PluginConverter>();
   }
 }
+
+std::vector<std::string> PluginManager::getSupportedSchemas()
+{
+  std::vector<std::string> ret;
+  for(auto& item : _protocols) {
+    ret.push_back(item.first);
+  }
+
+  return ret;
+}
+

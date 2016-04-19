@@ -19,7 +19,7 @@
 #include "logger.hpp"
 #include "utils.hpp"
 
-#include <iostream>
+#include <algorithm>
 #include <memory>
 
 void Core::loadProtocol(const std::string path)
@@ -35,23 +35,36 @@ void Core::loadConverter(const std::string path)
 std::vector<Uri> Core::createMapping(const Uri o_uri)
 {
   std::vector<Uri> f_uris;
+  std::vector<std::string> schemes = pm.getSupportedSchemas();
 
+  // Drop the scheme of the original URI
+  auto it = std::find(schemes.begin(), schemes.end(), o_uri.getSchema());
+  if (it != schemes.end()) {
+    schemes.erase(it);
+  }
+
+  // Get existing mappings for the given URI
   std::unique_lock<std::shared_timed_mutex> lock(_mappings_mutex);
   for(auto& item : _mappings) {
     if(item.second == o_uri) {
       f_uris.push_back(item.first);
+
+      // Drop the scheme from the list
+      it = std::find(schemes.begin(), schemes.end(), item.first.getSchema());
+      if (it != schemes.end()) {
+        schemes.erase(it);
+      }
     }
   }
 
-  if(f_uris.size() != 0) {
-    return f_uris;
-  }
-
-  f_uris = pm.installMapping(o_uri);
-  for(auto& f_uri : f_uris) {
+  // Check if all protocols have a mapping for the given URI
+  // If no mapping for a protocol is found create one
+  for(auto& scheme : schemes) {
+    Uri f_uri = pm.installMapping(o_uri, scheme);
     FIFU_LOG_INFO("(Core) New mapping: " + f_uri.toString() + " -> " + o_uri.toString());
 
     _mappings.emplace(f_uri, o_uri);
+    f_uris.push_back(f_uri);
   }
 
   return f_uris;

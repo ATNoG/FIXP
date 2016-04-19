@@ -63,8 +63,12 @@ public:
   void loadConverter(const std::string path);
 
   std::vector<Uri> installMapping(const Uri uri);
+  Uri installMapping(const Uri uri, const std::string protocol);
+
   std::shared_ptr<PluginProtocol> getProtocolPlugin(const std::string protocol);
   std::shared_ptr<PluginConverter> getConverterPlugin(const std::string fileType);
+
+  std::vector<std::string> getSupportedSchemas();
 };
 
 #endif /* PLUGIN_MANAGER__HPP_ */
