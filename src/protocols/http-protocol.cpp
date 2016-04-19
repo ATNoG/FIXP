@@ -214,9 +214,13 @@ int HttpProtocol::answer_to_connection(struct MHD_Connection *connection,
 {
   const char* host = MHD_lookup_connection_value(connection, MHD_HEADER_KIND, "Host");
   if(host == NULL) {
-    FIFU_LOG_WARN("(HTTP Protocol) Unable to find host parameter. Discarding received message...");
-    // FIXME: Send 400 (Bad Request)
-    return MHD_YES;
+    FIFU_LOG_WARN("(HTTP Protocol) Unable to find host parameter. Replying with Bad Request (400) error message...");
+    struct MHD_Response *response;
+    response = MHD_create_response_from_buffer(0, (void*) "",
+                                               MHD_RESPMEM_PERSISTENT);
+
+    int ret = MHD_queue_response(connection, MHD_HTTP_BAD_REQUEST, response);
+    return ret;
   }
 
   MetaMessage* in = new MetaMessage();
