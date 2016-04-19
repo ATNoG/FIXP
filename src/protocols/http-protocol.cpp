@@ -78,19 +78,18 @@ const std::tuple<const std::string, const std::string> requestHttpUri(const std:
     if(res != CURLE_OK) {
       FIFU_LOG_INFO("(HTTP Protocol) Unable to get " + uri
                     + "[Error " + curl_easy_strerror(res) + "]");
-    }
-
-    char* t;
-    res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &t);
-    if(res != CURLE_OK || !t) {
-      FIFU_LOG_INFO("(HTTP Protocol) Unable to get content type for " + uri
-                    + "[Error " + curl_easy_strerror(res) + "]");
-      type = "";
     } else {
-      type = t;
-    }
+      char* t;
+      res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &t);
+      if(res != CURLE_OK || !t) {
+        FIFU_LOG_INFO("(HTTP Protocol) Unable to get content type for " + uri
+                      + "[Error " + curl_easy_strerror(res) + "]");
+      } else {
+        type = t;
+      }
 
-    curl_easy_cleanup(curl);
+      curl_easy_cleanup(curl);
+    }
   }
 
   return std::make_tuple(type.substr(0, type.find(";")), content);
