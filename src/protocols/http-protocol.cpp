@@ -58,41 +58,41 @@ size_t getHttpContent(const void *content, const size_t size, const size_t nmemb
   return content_size;
 }
 
-const std::tuple<const std::string, const std::string> requestHttpUri(const std::string uri)
+bool requestHttpUri(const std::string uri, std::string& type, std::string& content)
 {
   FIFU_LOG_INFO("(HTTP Protocol) Requesting " + uri);
 
   CURL *curl;
   CURLcode res;
 
-  std::string type;
-  std::string content;
-
   curl = curl_easy_init();
-  if(curl) {
-    curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, getHttpContent);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &content);
-
-    res = curl_easy_perform(curl);
-    if(res != CURLE_OK) {
-      FIFU_LOG_INFO("(HTTP Protocol) Unable to get " + uri
-                    + "[Error " + curl_easy_strerror(res) + "]");
-    } else {
-      char* t;
-      res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &t);
-      if(res != CURLE_OK || !t) {
-        FIFU_LOG_INFO("(HTTP Protocol) Unable to get content type for " + uri
-                      + "[Error " + curl_easy_strerror(res) + "]");
-      } else {
-        type = t;
-      }
-
-      curl_easy_cleanup(curl);
-    }
+  if(!curl) {
+    return false;
   }
 
-  return std::make_tuple(type.substr(0, type.find(";")), content);
+  curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, getHttpContent);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &content);
+
+  res = curl_easy_perform(curl);
+  if(res != CURLE_OK) {
+    FIFU_LOG_INFO("(HTTP Protocol) Unable to get " + uri
+                  + "[Error " + curl_easy_strerror(res) + "]");
+    return false;
+  }
+
+  char* t;
+  res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &t);
+  if(res != CURLE_OK || !t) {
+    FIFU_LOG_WARN("(HTTP Protocol) Unable to get content type for " + uri
+                  + "[Error " + curl_easy_strerror(res) + "]");
+  } else {
+    type = t;
+    type = type.substr(0, type.find(";"));
+  }
+
+  curl_easy_cleanup(curl);
+  return true;
 }
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -162,13 +162,19 @@ void HttpProtocol::processMessage(const MetaMessage* msg)
 
   if(msg->getMessageType() == MESSAGE_TYPE_REQUEST) {
     // Request content from the original network
-    std::tuple<std::string, std::string> content = requestHttpUri(msg->getUriString());
+    std::string content;
+    std::string type;
+    if(!requestHttpUri(msg->getUriString(), type, content)) {
+      // Release the kraken and return
+      delete msg;
+      return;
+    }
 
     // Send received response to Core
     MetaMessage* response = new MetaMessage();
     response->setUri(msg->getUri());
     response->setMessageType(MESSAGE_TYPE_RESPONSE);
-    response->setContent(std::get<0>(content), std::get<1>(content));
+    response->setContent(type, content);
 
     FIFU_LOG_INFO("(HTTP Protocol) Received response of " + msg->getUriString());
     receivedMessage(response);
