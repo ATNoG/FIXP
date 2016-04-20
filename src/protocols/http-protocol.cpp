@@ -73,6 +73,7 @@ bool requestHttpUri(const std::string uri, std::string& type, std::string& conte
   curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, getHttpContent);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &content);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L); // 30 seconds
 
   res = curl_easy_perform(curl);
   if(res != CURLE_OK) {
