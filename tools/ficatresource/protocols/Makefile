@@ -14,7 +14,7 @@
 ##  You should have received a copy of the GNU General Public License
 ##  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-TARGET=plugin-example.so plugin-http.so plugin-ndn.so plugin-pursuit.so
+TARGET=plugin-example.so plugin-http.so plugin-ndn.so plugin-pursuit.so plugin-pursuit-multipath.so
 SRC_DIR=.
 INCLUDE_DIR=../../../include
 BUILD_DIR=../../../dist/tools/ficatresource-protocols
@@ -30,7 +30,7 @@ LDLIBS=
 NDNCXXFLAGS=`pkg-config --cflags libndn-cxx`
 NDNLDFLAGS=`pkg-config --libs libndn-cxx`
 
-SOURCES=$(wildcard $(SRC_DIR)/*.cpp)
+SOURCES=$(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(SRC_DIR)/*/*.cpp)
 OBJS=$(SOURCES:.cpp=.o)
 
 all: $(TARGET)
@@ -52,6 +52,9 @@ plugin-ndn.so: $(SRC_DIR)/plugin-ndn.o $(BUILD_DIR)
 
 plugin-pursuit.so: $(SRC_DIR)/plugin-pursuit.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -pthread -lblackadder
+
+plugin-pursuit-multipath.so: $(SRC_DIR)/plugin-pursuit-multipath.o $(SRC_DIR)/pursuit/chunk.o $(BUILD_DIR)
+	$(CXX) $(word 1,$^) $(word 2,$^) $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -pthread -lblackadder
 
 clean:
 	$(RM) -f $(OBJS)

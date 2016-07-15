@@ -14,7 +14,7 @@
 ##  You should have received a copy of the GNU General Public License
 ##  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-TARGET=pursuit-protocol.so http-protocol.so ndn-protocol.so
+TARGET=pursuit-protocol.so pursuit-multipath-protocol.so http-protocol.so ndn-protocol.so
 SRC_DIR=.
 INCLUDE_DIR=../../include
 BUILD_DIR=../../dist/fixp-protocols
@@ -30,7 +30,7 @@ LDLIBS=
 NDNCXXFLAGS=`pkg-config --cflags libndn-cxx`
 NDNLDFLAGS=`pkg-config --libs libndn-cxx`
 
-SOURCES=$(wildcard $(SRC_DIR)/*.cpp)
+SOURCES=$(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(SRC_DIR)/*/*.cpp)
 OBJS=$(SOURCES:.cpp=.o)
 
 all: $(TARGET)
@@ -43,6 +43,9 @@ $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 pursuit-protocol.so: $(SRC_DIR)/pursuit-protocol.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -lblackadder -lcryptopp
+
+pursuit-multipath-protocol.so: $(SRC_DIR)/pursuit-multipath-protocol.o $(SRC_DIR)/pursuit/chunk.o $(BUILD_DIR)
+	$(CXX) $(word 1,$^) $(word 2,$^) $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS) -lblackadder -lcryptopp
 
 ndn-protocol.so: $(SRC_DIR)/ndn-protocol.o $(BUILD_DIR)
 	$(CXX) $< $(CPPFLAGS) $(NDNCXXFLAGS) $(LDFLAGS) $(NDNLDFLAGS) -o $(BUILD_DIR)/$@ $(LDLIBS)
