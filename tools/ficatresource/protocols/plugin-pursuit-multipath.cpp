@@ -133,6 +133,10 @@ void PursuitMultipathPlugin::processUri(const Uri uri)
   subscribe_scope(uri, IMPLICIT_RENDEZVOUS);
   subscribe_item(uri.toString().append("ffffffffffffffff"), MULTIPATH);
 
+  size_t chunk_no = 0;
+  unsigned char f_bytearray[FID_LEN];
+  unsigned char rf_bytearray[FID_LEN];
+
   bool is_msg_received = false;
   while (!is_msg_received) {
     Event ev;
@@ -144,8 +148,6 @@ void PursuitMultipathPlugin::processUri(const Uri uri)
 
         // Convert FID and Reverse FID
         // from bit-array to byte-array (little-endian format)
-        unsigned char f_bytearray[FID_LEN];
-        unsigned char rf_bytearray[FID_LEN];
         for(int i = FID_LEN - 1; i >= 0; --i) {
           int rf_byte = 0;
           int f_byte = 0;
@@ -159,15 +161,18 @@ void PursuitMultipathPlugin::processUri(const Uri uri)
         }
 
         ChunkRequest req((const char*) rf_bytearray, (char) 0);
-        char* reqBytes = new char[req.size()];
+        char reqBytes[req.size()];
         req.toBytes(reqBytes);
 
-        publish_data(uri.toString().append("0000000000000000"),
+        // Convert chunk number to request into hex format
+        std::stringstream chunk_no_hex;
+        chunk_no_hex << std::setfill('0') << std::setw(16) << std::hex << chunk_no;
+
+        publish_data(uri.toString().append(chunk_no_hex.str()),
                      IMPLICIT_RENDEZVOUS,
                      f_bytearray,
                      (void*) reqBytes,
                      req.size());
-
       } break;
 
       case PUBLISHED_DATA: {
@@ -179,7 +184,22 @@ void PursuitMultipathPlugin::processUri(const Uri uri)
               std::cerr << "Error while writing to stdout. ";
             }
 
-            is_msg_received = true;
+            if(resp.getPayloadLen() < BUFSIZE) {
+              is_msg_received = true;
+            } else {
+              ChunkRequest req((const char*) rf_bytearray, (char) 0);
+              char reqBytes[req.size()];
+              req.toBytes(reqBytes);
+
+              std::stringstream chunk_no_ss;
+              chunk_no_ss << std::setfill('0') << std::setw(16) << std::hex << ++chunk_no;
+
+              publish_data(uri.toString().append(chunk_no_ss.str()),
+                           IMPLICIT_RENDEZVOUS,
+                           f_bytearray,
+                           (void*) reqBytes,
+                           req.size());
+            }
           }
 
       } break;
