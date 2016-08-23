@@ -257,7 +257,7 @@ void HttpProtocol::responseHttpUri(const MetaMessage* msg)
   pendingConnections.erase(it);
 
   struct MHD_Response* response;
-  response = MHD_create_response_from_buffer(msg->getContentData().size(), (void*) msg->getContentData().c_str(), MHD_RESPMEM_PERSISTENT);
+  response = MHD_create_response_from_buffer(msg->getContentData().size(), (void*) msg->getContentData().c_str(), MHD_RESPMEM_MUST_COPY);
   MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE, msg->getContentType().c_str());
 
   MHD_resume_connection(connection);
