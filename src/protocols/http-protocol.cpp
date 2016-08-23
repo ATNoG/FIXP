@@ -40,7 +40,7 @@ std::string createForeignUri(std::string o_uri)
 
   return std::string(SCHEMA) + ":"
           + "//" + DEFAULT_HOSTNAME
-          + (HTTPD_PORT == 80 ? "" : ":" + std::to_string(HTTPD_PORT))
+          + (HTTPD_PORT == 80 ? "" : ":" + std::to_string(HTTPD_PORT)) + "/"
           + (uri.getAuthority().size() != 0 ? "/" + uri.getAuthority() : "")
           + uri.getPath()
           + (uri.getQuery().size() != 0 ? "?" + uri.getQuery() : "")
