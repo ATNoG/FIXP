@@ -104,6 +104,8 @@ ChunkResponse::ChunkResponse(const char* data, size_t size)
 
 ChunkResponse::ChunkResponse(const char* payload, size_t payload_len, unsigned char path_id, size_t sender_wnd)
 {
+  _size = 0;
+
   // Set chunk type
   _type = (unsigned char) CHUNK_RESPONSE;
   _size++;
