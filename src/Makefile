@@ -25,7 +25,7 @@ CXX=g++
 RM=rm
 CFLAGS=
 CPPFLAGS=-I$(INCLUDE_DIR) -std=c++14
-LDFLAGS=
+LDFLAGS=-rdynamic
 LDLIBS=-ldl -lpthread -lmagic
 
 SOURCES=$(wildcard $(SRC_DIR)/*.cpp)
