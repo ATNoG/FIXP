@@ -20,6 +20,7 @@
 
 #include <mutex>
 #include <iostream>
+#include <chrono>
 
 enum Level {
   LOG_LEVEL_FATAL = 0,
@@ -57,7 +58,11 @@ public:
   void log(const std::string level, const std::string msg)
   {
     std::lock_guard<std::mutex> lock(_mutex);
-    std::clog << "[" << level << "] " << msg << std::endl;
+
+    using namespace std::chrono;
+    microseconds ms = duration_cast<microseconds>(system_clock::now().time_since_epoch());
+
+    std::clog << ms.count() << " [" << level << "] " << msg << std::endl << std::flush;
   }
 
   Logger(Logger const&) = delete;
