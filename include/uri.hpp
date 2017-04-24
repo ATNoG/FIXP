@@ -331,8 +331,24 @@ private:
     }
   }
 
+  void compressPath(std::string& str) {
+    size_t pos = 0;
+
+    while((pos = str.find("/./")) != std::string::npos) {
+      str.replace(pos, 3, "/");
+    }
+
+    while((pos = str.find("/../")) != std::string::npos) {
+      size_t tmp = str.rfind("/", pos - 1);
+      str.erase(tmp + 1, pos - tmp + 3);
+    }
+
+  }
+
   void normalize()
   {
+    compressPath(_path);
+
     // Remove double slashes from authority and path only
     removeDoubleSlashes(_authority);
     removeDoubleSlashes(_path);
