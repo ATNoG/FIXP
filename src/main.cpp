@@ -207,6 +207,8 @@ int parseCmdOptions(int& argc, char**& argv,
     return -1;
   }
 
+  numWorkers = options.numWorkers;
+
   verbosity = options.verbosity;
 
   return 0;
