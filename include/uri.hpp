@@ -283,8 +283,8 @@ private:
     reset();
 
     std::smatch match;
-    std::regex expression("^(([^:/?#]+):)(//([^/?#]*))?([^?#]*)([?]([^#]*))?(#(.*))?",
-                          std::regex_constants::ECMAScript | std::regex_constants::icase);
+    static std::regex const expression("^(([^:/?#]+):)(//([^/?#]*))?([^?#]*)([?]([^#]*))?(#(.*))?",
+                                       std::regex_constants::ECMAScript | std::regex_constants::icase);
 
     if(std::regex_match(str, match, expression) && match.size() == 10) {
       _isValid    = true;
@@ -306,8 +306,8 @@ private:
     reset();
 
     std::smatch match;
-    std::regex expression("^(//([^/?#]*))?([^?#]*)([?]([^#]*))?(#(.*))?",
-                          std::regex_constants::ECMAScript | std::regex_constants::icase);
+    static std::regex const expression("^(//([^/?#]*))?([^?#]*)([?]([^#]*))?(#(.*))?",
+                                       std::regex_constants::ECMAScript | std::regex_constants::icase);
 
     if(std::regex_match(str, match, expression) && match.size() == 8) {
       _isValid    = true;
