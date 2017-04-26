@@ -117,7 +117,7 @@ void PursuitProtocol::startReceiver()
                                                                      ev.data_len));
         unsubscribeUri(in->getUri());
 
-        FIFU_LOG_INFO("(PURSUIT Protocol) Received START_PUBLISH to " + in->getUriString());
+        FIFU_LOG_INFO("(PURSUIT Protocol) Received PUBLISH_DATA to " + in->getUriString());
         receivedMessage(in);
 
       } break;
