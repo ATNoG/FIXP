@@ -28,7 +28,7 @@
 #define SCHEMA "pursuit-multipath"
 #define PURSUIT_ID_LEN_HEX_FORMAT 2 * PURSUIT_ID_LEN
 #define DEFAULT_SCOPE "4141414141414141"
-#define CHUNK_SIZE 1400
+#define CHUNK_SIZE 4400
 
 class PcrEntry; // Class definition below
 
