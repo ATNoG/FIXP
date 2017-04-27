@@ -184,7 +184,7 @@ void PursuitMultipathPlugin::processUri(const Uri uri)
               std::cerr << "Error while writing to stdout. ";
             }
 
-            if(resp.getPayloadLen() < BUFSIZE) {
+            if(resp.getPayloadLen() < CHUNK_SIZE) {
               is_msg_received = true;
             } else {
               ChunkRequest req((const char*) rf_bytearray, (char) 0);

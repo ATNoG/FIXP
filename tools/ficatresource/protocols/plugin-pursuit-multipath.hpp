@@ -23,7 +23,7 @@
 #include <blackadder.hpp>
 
 #define SCHEMA "pursuit-multipath"
-#define BUFSIZE 1400
+#define CHUNK_SIZE 1400
 
 class PursuitMultipathPlugin : public Plugin
 {

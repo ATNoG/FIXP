@@ -28,6 +28,7 @@
 #define SCHEMA "pursuit-multipath"
 #define PURSUIT_ID_LEN_HEX_FORMAT 2 * PURSUIT_ID_LEN
 #define DEFAULT_SCOPE "4141414141414141"
+#define CHUNK_SIZE 1400
 
 class PcrEntry; // Class definition below
 
@@ -85,6 +86,12 @@ public:
   std::string getChunkUri() const
   {
     return _chunk_uri;
+  }
+
+  size_t getChunkNumber() const
+  {
+    return strtoull(_chunk_uri.substr(_chunk_uri.size() - PURSUIT_ID_LEN_HEX_FORMAT,
+                                      PURSUIT_ID_LEN_HEX_FORMAT).c_str(), NULL, 16);
   }
 
   unsigned char getFid() const

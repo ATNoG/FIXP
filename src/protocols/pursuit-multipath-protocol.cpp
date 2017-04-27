@@ -175,17 +175,24 @@ void PursuitMultipathProtocol::processMessage(const MetaMessage* msg)
     auto pcr_it = pending_chunk_requests.find(msg->getUriString());
     if(pcr_it != pending_chunk_requests.end()) {
       for(auto const& pcr_entry : pcr_it->second) {
-        ChunkResponse* resp = new ChunkResponse(msg->getContentData().c_str(), msg->getContentData().size(),
-                                                pcr_entry.getFid(), 1);
+
+        std::string content_to_send;
+        content_to_send = msg->getContentData().substr(pcr_entry.getChunkNumber() * CHUNK_SIZE, CHUNK_SIZE);
+
+        ChunkResponse resp(content_to_send.c_str(),
+                           content_to_send.size(),
+                           pcr_entry.getFid(),
+                           1);
+
         char* respBytes;
-        respBytes = new char[resp->size()];
-        resp->toBytes(respBytes);
+        respBytes = new char[resp.size()];
+        resp.toBytes(respBytes);
 
         publish_data(pcr_entry.getChunkUri(),
                      IMPLICIT_RENDEZVOUS,
                      (unsigned char*) pcr_entry.getReverseFid(),
                      (void*) respBytes,
-                     resp->size());
+                     resp.size());
       }
 
       pending_chunk_requests.erase(pcr_it);
