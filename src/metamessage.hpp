@@ -107,6 +107,30 @@ public:
     _metadata = metadata;
   }
 
+  bool getKeepSession() const
+  {
+    std::string value;
+    try {
+      value = _metadata.at("KeepSession");
+    } catch(const std::out_of_range& e) {
+      return false;
+    }
+
+    if(value == "True") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void setKeepSession(const bool val)
+  {
+    if(val) {
+      _metadata.emplace("KeepSession", "True");
+    } else {
+      _metadata.emplace("KeepSession", "False");
+    }
+  }
 
   MetadataMessageType getMessageType() const
   {

@@ -134,7 +134,9 @@ void Core::processMessage(const MetaMessage* msg)
         out_uris = it_wait->second;
       }
 
-      _waiting_for_response.erase(msg->getUri());
+      if(!msg->getKeepSession()) {
+        _waiting_for_response.erase(msg->getUri());
+      }
       lock_wait.unlock();
     }
   } // End: Locking scope

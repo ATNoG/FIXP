@@ -109,13 +109,12 @@ void PursuitProtocol::startReceiver()
       } break;
 
       case PUBLISHED_DATA: {
-
         MetaMessage* in = new MetaMessage();
         in->setUri(std::string(SCHEMA) + ":" + chararray_to_hex(ev.id));
         in->setMessageType(MESSAGE_TYPE_RESPONSE);
         in->setContent("", std::string(reinterpret_cast<const char*>(ev.data),
                                                                      ev.data_len));
-        unsubscribeUri(in->getUri());
+        in->setKeepAlive(true);
 
         FIFU_LOG_INFO("(PURSUIT Protocol) Received PUBLISH_DATA to " + in->getUriString());
         receivedMessage(in);
