@@ -112,11 +112,6 @@ std::string NdnProtocol::installMapping(const std::string uri)
   Uri f_uri(createForeignUri(uri));
   std::string uri_wo_schema = f_uri.toUriEncodedString().erase(0, strlen(SCHEMA) + 1);
 
-  _face.setInterestFilter(InterestFilter(uri_wo_schema, ""),
-                          bind(&NdnProtocol::onInterest, this, _1, _2),
-                          RegisterPrefixSuccessCallback(),
-                          bind(&NdnProtocol::onRegisterFailed, this, _1, _2));
-
   return f_uri.toString();
 }
 
