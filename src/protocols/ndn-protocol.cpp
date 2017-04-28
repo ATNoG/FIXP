@@ -87,6 +87,11 @@ void NdnProtocol::start()
 
   _msg_receiver = std::thread(&NdnProtocol::startReceiver, this);
   _msg_sender = std::thread(&NdnProtocol::startSender, this);
+
+  _face.setInterestFilter(InterestFilter("/fifu"),
+                          bind(&NdnProtocol::onInterest, this, _1, _2),
+                          RegisterPrefixSuccessCallback(),
+                          bind(&NdnProtocol::onRegisterFailed, this, _1, _2));
 }
 
 void NdnProtocol::stop()
@@ -220,6 +225,7 @@ void NdnProtocol::onData(const Interest& interest, const Data& data)
     in->setMessageType(MESSAGE_TYPE_RESPONSE);
     in->setContent("", std::string(reinterpret_cast<const char*>(content.value()),
                                                                  content.value_size()));
+
     FIFU_LOG_INFO("(NDN Protocol) Received Data message to " + in->getUriString());
     receivedMessage(in);
   }
