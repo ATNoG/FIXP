@@ -175,24 +175,39 @@ void PursuitMultipathProtocol::processMessage(const MetaMessage* msg)
     auto pcr_it = pending_chunk_requests.find(msg->getUriString());
     if(pcr_it != pending_chunk_requests.end()) {
       for(auto const& pcr_entry : pcr_it->second) {
-
         std::string content_to_send;
-        content_to_send = msg->getContentData().substr(pcr_entry.getChunkNumber() * CHUNK_SIZE, CHUNK_SIZE);
+        size_t requested_chunk = pcr_entry.getChunkNumber();
+        bool send_all_chunks = false;
 
-        ChunkResponse resp(content_to_send.c_str(),
-                           content_to_send.size(),
-                           pcr_entry.getFid(),
-                           1);
+        do {
+          // If this is true, then send all chunks without
+          // being explicitly requested
+          if(requested_chunk == 0xffffffffffffffff) {
+            requested_chunk = 0;
+            send_all_chunks = true;
+          }
 
-        char* respBytes;
-        respBytes = new char[resp.size()];
-        resp.toBytes(respBytes);
+          content_to_send = msg->getContentData().substr(requested_chunk * CHUNK_SIZE, CHUNK_SIZE);
 
-        publish_data(pcr_entry.getChunkUri(),
-                     IMPLICIT_RENDEZVOUS,
-                     (unsigned char*) pcr_entry.getReverseFid(),
-                     (void*) respBytes,
-                     resp.size());
+          ChunkResponse resp(content_to_send.c_str(),
+                             content_to_send.size(),
+                             pcr_entry.getFid(),
+                             1);
+
+          char* respBytes;
+          respBytes = new char[resp.size()];
+          resp.toBytes(respBytes);
+
+          publish_data(pcr_entry.getChunkUri(),
+                       IMPLICIT_RENDEZVOUS,
+                       (unsigned char*) pcr_entry.getReverseFid(),
+                       (void*) respBytes,
+                       resp.size());
+
+          if(send_all_chunks) {
+            requested_chunk++;
+          }
+        } while(content_to_send.size() == CHUNK_SIZE && send_all_chunks);
       }
 
       pending_chunk_requests.erase(pcr_it);
