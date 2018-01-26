@@ -14,7 +14,7 @@
 ##  You should have received a copy of the GNU General Public License
 ##  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-TARGET=pursuit-protocol.so pursuit-multipath-protocol.so http-protocol.so ndn-protocol.so
+TARGET=ndn-protocol.so pursuit-multipath-protocol.so http-protocol.so
 SRC_DIR=.
 INCLUDE_DIR=../../include
 BUILD_DIR=../../dist/fixp-protocols
