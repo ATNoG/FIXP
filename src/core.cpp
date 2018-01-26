@@ -194,6 +194,5 @@ void Core::processMessage(const MetaMessage* msg)
     }
   }
 
-  // Release the kraken
   delete msg;
 }

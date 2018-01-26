@@ -155,7 +155,6 @@ void PursuitProtocol::processMessage(const MetaMessage* msg)
     publishUriContent(msg->getUri(), (void*) msg->getContentData().c_str(), msg->getContentData().size());
   }
 
-  // Release the kraken
   delete msg;
 }
 

@@ -166,7 +166,6 @@ void HttpProtocol::processMessage(const MetaMessage* msg)
     std::string content;
     std::string type;
     if(!requestHttpUri(msg->getUriString(), type, content)) {
-      // Release the kraken and return
       delete msg;
       return;
     }
@@ -183,7 +182,6 @@ void HttpProtocol::processMessage(const MetaMessage* msg)
     responseHttpUri(msg);
   }
 
-  // Release the kraken
   delete msg;
 }
 
