@@ -132,6 +132,23 @@ public:
     }
   }
 
+  size_t getChunkNumber() const
+  {
+    std::string value;
+    try {
+      value = _metadata.at("ChunkNumber");
+    } catch(const std::out_of_range& e) {
+      return -1;
+    }
+
+    return atoll(value.c_str());
+  }
+
+  void setChunkNumber(const size_t val)
+  {
+    _metadata.emplace("ChunkNumber", std::to_string(val));
+  }
+
   MetadataMessageType getMessageType() const
   {
     std::string messageType;
