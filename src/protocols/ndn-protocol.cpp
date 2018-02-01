@@ -44,6 +44,10 @@ std::string createForeignUri(std::string o_uri)
     f_uri.append("/").append(uri.getAuthority());
   }
 
+  if(uri.getPath().find_first_of("/") != 0) {
+    f_uri.append("/");
+  }
+
   f_uri.append(uri.getPath())
        .append(escapeString("?"))
        .append(uri.getUriEncodedQuery())
