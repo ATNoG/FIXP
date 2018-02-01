@@ -115,10 +115,10 @@ void PursuitMultipathProtocol::startReceiver()
           uri.erase(uri.size() - PURSUIT_ID_LEN_HEX_FORMAT);
 
           ChunkRequest req((char*) ev.data);
-          unsigned char fid = req.getPathId();
+          unsigned char path_id = req.getPathId();
           char* rfid = req.getReverseFid();
 
-          PcrEntry pcr_entry(chunkuri, fid, rfid);
+          PcrEntry pcr_entry(chunkuri, path_id, NULL, rfid);
           auto pcr_it = pending_chunk_requests.find(uri);
           if(pcr_it != pending_chunk_requests.end()) {
             pcr_it->second.push_back(pcr_entry);
@@ -132,12 +132,102 @@ void PursuitMultipathProtocol::startReceiver()
           in->setUri(uri);
           in->setMessageType(MESSAGE_TYPE_REQUEST);
 
-          FIFU_LOG_INFO("(PURSUIT Protocol) Received ChunkRequest to " + in->getUriString());
           receivedMessage(in);
 
         } else if(type == CHUNK_RESPONSE) {
-        // TODO
+          FIFU_LOG_INFO("(PURSUIT Protocol) Received ChunkResponse for " + chararray_to_hex(ev.id));
+
+          std::string uri = SCHEMA;
+          uri.append(":").append(chararray_to_hex(ev.id));
+          int chunk_no = strtoull(uri.substr(uri.size() - PURSUIT_ID_LEN_HEX_FORMAT,
+                                  PURSUIT_ID_LEN_HEX_FORMAT).c_str(), NULL, 16);
+          uri.erase(uri.size() - PURSUIT_ID_LEN_HEX_FORMAT);
+
+          auto pcr_it = pending_requests.find(uri);
+          if(pcr_it == pending_requests.end()) {
+            break;
+          }
+
+          ChunkResponse resp((char*) ev.data, ev.data_len);
+          pcr_it->second._payload += std::string(reinterpret_cast<const char*>(resp.getPayload()),
+                                                 resp.getPayloadLen());
+
+          if(resp.getPayloadLen() < CHUNK_SIZE) {
+            MetaMessage* in = new MetaMessage();
+            in->setUri(uri);
+            in->setMessageType(MESSAGE_TYPE_RESPONSE);
+            in->setContent("application/octet-stream", pcr_it->second._payload);
+
+            FIFU_LOG_INFO("(PURSUIT Protocol) Received all ChunkResponse. Sending payload to core " + chararray_to_hex(ev.id));
+            receivedMessage(in);
+
+            // UNSUBSCRIBE
+            pending_requests.erase(pcr_it);
+          } else {
+            ChunkRequest req((const char*) pcr_it->second.getReverseFid(), (char) 0);
+            char reqBytes[req.size()];
+            req.toBytes(reqBytes);
+
+            std::stringstream chunk_no_ss;
+            chunk_no_ss << std::setfill('0') << std::setw(16) << std::hex << ++chunk_no;
+
+            publish_data(uri.append(chunk_no_ss.str()),
+                         IMPLICIT_RENDEZVOUS,
+                         (unsigned char*) pcr_it->second.getFid(),
+                         (void*) reqBytes,
+                         req.size());
+          }
         }
+      } break;
+
+      case START_PUBLISH: {
+        FIFU_LOG_INFO("(PURSUIT Protocol) START_PUBLISHER " + chararray_to_hex(ev.id));
+        std::string uri = SCHEMA;
+        uri.append(":").append(chararray_to_hex(ev.id));
+        uri.erase(uri.size() - PURSUIT_ID_LEN_HEX_FORMAT);
+
+        auto pcr_it = pending_requests.find(uri);
+        if(pcr_it == pending_requests.end()) {
+          break;
+        }
+
+        std::string fid = ev.FIDs.substr(0, FID_LEN * 8);
+        std::string rfid = ev.FIDs.substr(FID_LEN * 8, FID_LEN * 8);
+
+        // Convert FID and Reverse FID
+        // from bit-array to byte-array (little-endian format)
+        unsigned char f_bytearray[FID_LEN];
+        unsigned char rf_bytearray[FID_LEN];
+        for(int i = FID_LEN - 1; i >= 0; --i) {
+          int rf_byte = 0;
+          int f_byte = 0;
+          for(int j = (FID_LEN - i - 1) * 8; j < ((FID_LEN - i) * 8); ++j) {
+            rf_byte = (rf_byte << 1) | (rfid.at(j) == '1' ? 1 : 0);
+            f_byte = (f_byte << 1) | (fid.at(j) == '1' ? 1 : 0);
+          }
+
+          rf_bytearray[i] = rf_byte;
+          f_bytearray[i] = f_byte;
+        }
+
+        pcr_it->second.setPathId((char) 0);
+        pcr_it->second.setFid((char*) f_bytearray);
+        pcr_it->second.setReverseFid((char*) rf_bytearray);
+
+        ChunkRequest req((const char*) rf_bytearray, (char) pcr_it->second.getPathId());
+        char reqBytes[req.size()];
+        req.toBytes(reqBytes);
+
+        // Convert chunk number to request into hex format
+        std::stringstream chunk_no_hex;
+        chunk_no_hex << std::setfill('0') << std::setw(16) << std::hex << 0;
+
+        publish_data(uri.append(chunk_no_hex.str()),
+                     IMPLICIT_RENDEZVOUS,
+                     (unsigned char*) pcr_it->second.getFid(),
+                     (void*) reqBytes,
+                     req.size());
+        FIFU_LOG_INFO("(PURSUIT Protocol) Sent ChunkRequest to " + chararray_to_hex(ev.id));
       } break;
     }
   }
@@ -166,9 +256,12 @@ void PursuitMultipathProtocol::processMessage(const MetaMessage* msg)
   FIFU_LOG_INFO("(PURSUIT Protocol) Processing message (" + msg->getUriString() + ")");
 
   if(msg->getMessageType() == MESSAGE_TYPE_REQUEST) {
-    // Subscribe URI
-    subscribeUri(msg->getUri());
+    // Subscribe URI using multipath approach
+    subscribeScope(msg->getUriString().erase(0, strlen(SCHEMA) + 1), IMPLICIT_RENDEZVOUS);
+    subscribeUri(msg->getUriString().append("ffffffffffffffff"), MULTIPATH);
 
+    PcrEntry pcr("", 0, NULL, NULL);
+    pending_requests.emplace(msg->getUriString(), pcr);
   } else if(msg->getMessageType() == MESSAGE_TYPE_RESPONSE) {
     // Start publishing data
 
@@ -191,7 +284,7 @@ void PursuitMultipathProtocol::processMessage(const MetaMessage* msg)
 
           ChunkResponse resp(content_to_send.c_str(),
                              content_to_send.size(),
-                             pcr_entry.getFid(),
+                             pcr_entry.getPathId(),
                              1);
 
           char* respBytes;
@@ -214,7 +307,6 @@ void PursuitMultipathProtocol::processMessage(const MetaMessage* msg)
     }
   }
 
-  // Release the kraken
   delete msg;
 }
 
@@ -296,7 +388,7 @@ int PursuitMultipathProtocol::publishUriContent(const Uri uri, void* content, si
   return 0;
 }
 
-int PursuitMultipathProtocol::subscribeUri(const Uri uri)
+int PursuitMultipathProtocol::subscribeUri(const Uri uri, unsigned char strategy)
 {
   std::string uri_wo_schema = uri.toUriEncodedString().erase(0, strlen(SCHEMA) + 1);
 
@@ -307,14 +399,14 @@ int PursuitMultipathProtocol::subscribeUri(const Uri uri)
   FIFU_LOG_INFO("(PURSUIT Protocol) Subscribing data related with " + uri.toString());
   ba->subscribe_info(hex_to_chararray(id),
                      hex_to_chararray(prefix_id),
-                     DOMAIN_LOCAL,
+                     strategy,
                      NULL,
                      0);
 
   return 0;
 }
 
-int PursuitMultipathProtocol::unsubscribeUri(const Uri uri)
+int PursuitMultipathProtocol::unsubscribeUri(const Uri uri, unsigned char strategy)
 {
   std::string uri_wo_schema = uri.toUriEncodedString().erase(0, strlen(SCHEMA) + 1);
 
@@ -325,7 +417,7 @@ int PursuitMultipathProtocol::unsubscribeUri(const Uri uri)
   FIFU_LOG_INFO("(PURSUIT Protocol) Unsubscribing data related with " + uri.toString());
   ba->unsubscribe_info(hex_to_chararray(id),
                        hex_to_chararray(prefix_id),
-                       DOMAIN_LOCAL,
+                       strategy,
                        NULL,
                        0);
 

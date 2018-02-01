@@ -39,6 +39,7 @@ private:
   std::thread _msg_receiver;
   std::thread _msg_sender;
   std::map<std::string, std::vector<PcrEntry> > pending_chunk_requests;
+  std::map<std::string, PcrEntry> pending_requests;
 
 public:
   PursuitMultipathProtocol(ConcurrentBlockingQueue<const MetaMessage*>& queue,
@@ -64,23 +65,32 @@ private:
 
   int publish_data(const Uri uri, unsigned char strategy, unsigned char* fid, void* content, size_t content_size);
   int publishUriContent(const Uri uri, void* content, size_t content_size);
-  int subscribeUri(const Uri uri);
-  int unsubscribeUri(const Uri uri);
+  int subscribeUri(const Uri uri, unsigned char strategy);
+  int unsubscribeUri(const Uri uri, unsigned char strategy);
 };
 
 class PcrEntry
 {
 private:
   std::string _chunk_uri;
-  unsigned char _fid;
+  unsigned char _path_id;
+  char* _fid;
   char* _rfid;
 
 public:
-  PcrEntry(std::string chunk_uri, unsigned char fid, char* rfid)
+  std::string _payload;
+
+  PcrEntry(std::string chunk_uri, unsigned char path_id, char* fid, char* rfid)
   {
     _chunk_uri = chunk_uri;
-    _fid = fid;
+    _path_id = path_id;
     _rfid = rfid;
+    _payload = "";
+  }
+
+  void setChunkUri(const std::string chunk_uri)
+  {
+    _chunk_uri = chunk_uri;
   }
 
   std::string getChunkUri() const
@@ -94,9 +104,29 @@ public:
                                       PURSUIT_ID_LEN_HEX_FORMAT).c_str(), NULL, 16);
   }
 
-  unsigned char getFid() const
+  void setPathId(const unsigned char path_id)
+  {
+    _path_id = path_id;
+  }
+
+  unsigned char getPathId() const
+  {
+    return _path_id;
+  }
+
+  void setFid(char* fid)
+  {
+    _fid = fid;
+  }
+
+  char* getFid() const
   {
     return _fid;
+  }
+
+  void setReverseFid(char* rfid)
+  {
+    _rfid = rfid;
   }
 
   char* getReverseFid() const
