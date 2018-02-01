@@ -38,11 +38,9 @@ void NdnPlugin::onData(const Interest& interest, const Data& data)
     onChunk(interest,data);
   else
   {
-    std::cout << data << std::endl;
     Block content = data.getContent();
     std::cout << std::string(reinterpret_cast<const char*>(content.value()),
-                             content.value_size())
-    << std::endl;
+                             content.value_size());
   }
 }
 
@@ -75,23 +73,18 @@ void NdnPlugin::onChunk(const Interest& interest, const Data& data)
     _scheduler.scheduleEvent(time::milliseconds(0),
                               bind(&NdnPlugin::requestChunk, this, next_chunk));
   }
-  else
-    std::cout << std::endl;
 }
 
 void NdnPlugin::onTimeout(const Interest& interest)
 {
-  std::cout << "Timeout" << interest << std::endl;
 }
 
 void NdnPlugin::onChunkTimeout(const Interest& interest)
 {
-  std::cout << "Chunk request timeout " << interest << std::endl;
 }
 
 void NdnPlugin::processUri(const Uri uri)
 {
-  std::cout << "NdnPlugin requesting " << uri.toString() << std::endl << std::flush;
   std::string uri_wo_schema = uri.toUriEncodedString().erase(0, strlen(SCHEMA) + 1);
 
   Interest interest(uri_wo_schema);
@@ -101,8 +94,6 @@ void NdnPlugin::processUri(const Uri uri)
   _face.expressInterest(interest,
                          bind(&NdnPlugin::onData, this,  _1, _2),
                          bind(&NdnPlugin::onTimeout, this, _1));
-
-  std::cout << "Sending " << interest << std::endl;
 
   // processEvents will block until the requested data received or timeout occurs
   _io_service.run();
