@@ -33,67 +33,89 @@ extern "C" void destroy_object(NdnPlugin* object)
 
 void NdnPlugin::onData(const Interest& interest, const Data& data)
 {
-  //Check whether it is a chunk or a complete data
-  if (data.getName()[-1].isSegment())
-    onChunk(interest,data);
-  else
-  {
-    Block content = data.getContent();
-    std::cout << std::string(reinterpret_cast<const char*>(content.value()),
-                             content.value_size());
+  //Check whether it is a segment, an offset or a complete data
+  if(data.getName()[-1].isSegment()) {
+    onSegment(interest, data);
+  } else if(data.getName()[-1].isSegmentOffset()) {
+    onSegmentOffset(interest, data);
+  } else {
+    std::string content(reinterpret_cast<const char*>(data.getContent().value()),
+                        data.getContent().value_size());
+
+    size_t n = fwrite(content.c_str(), sizeof(char), content.size(), stdout);
+    if(content.size() != n) {
+      std::cerr << "Error while writing to stdout. ";
+    }
   }
 }
 
-void NdnPlugin::requestChunk(const Name& interest_name)
+void NdnPlugin::sendInterest(const Name& name)
 {
-  Interest interest(interest_name);
+  Interest interest(name);
   interest.setInterestLifetime(time::milliseconds(5000));
   interest.setMustBeFresh(true);
 
   _face.expressInterest(interest,
-                        bind(&NdnPlugin::onChunk, this,  _1, _2),
-                        bind(&NdnPlugin::onChunkTimeout, this, _1));
-
+                        bind(&NdnPlugin::onData, this,  _1, _2),
+                        bind(&NdnPlugin::onTimeout, this, _1));
 }
 
-void NdnPlugin::onChunk(const Interest& interest, const Data& data)
+void NdnPlugin::onSegment(const Interest& interest, const Data& data)
 {
+  std::string content(reinterpret_cast<const char*>(data.getContent().value()),
+                      data.getContent().value_size());
 
-  const Name & data_name = data.getName();
-  uint64_t chunk_no = data_name[-1].toSegment();
-  uint64_t last_chunk_no = data.getFinalBlockId().toSegment();
-  std::cout << std::string(reinterpret_cast<const char *>(data.getContent().value()),
-                                                       data.getContent().value_size());
-  //TODO: For now lets assume FinalBlockId will be available in every chunk
-  if(chunk_no!=last_chunk_no)
-  {
-    const Name next_chunk = data_name.getPrefix(data_name.size() - 1)
-                                            .appendSegment(chunk_no + 1);
+  size_t n = fwrite(content.c_str(), sizeof(char), content.size(), stdout);
+  if(content.size() != n) {
+    std::cerr << "Error while writing to stdout. ";
+  }
+
+  if((data.getFinalBlockId().empty() && data.getContent().value_size() == MAX_CHUNK_SIZE)
+     || (!data.getFinalBlockId().empty() &&
+         data.getName()[-1].toSegment() < data.getFinalBlockId().toSegment())) {
+
+    // Request next segment
+    const Name next_segment_name = data.getName().getSuccessor();
+
     // Schedule a new event
     _scheduler.scheduleEvent(time::milliseconds(0),
-                              bind(&NdnPlugin::requestChunk, this, next_chunk));
+                             bind(&NdnPlugin::sendInterest, this, next_segment_name));
+  }
+}
+
+void NdnPlugin::onSegmentOffset(const Interest& interest, const Data& data)
+{
+  std::string content(reinterpret_cast<const char*>(data.getContent().value()),
+                      data.getContent().value_size());
+
+  size_t n = fwrite(content.c_str(), sizeof(char), content.size(), stdout);
+  if(content.size() != n) {
+    std::cerr << "Error while writing to stdout. ";
+  }
+
+  if((data.getFinalBlockId().empty() && data.getContent().value_size() == MAX_CHUNK_SIZE)
+     || (!data.getFinalBlockId().empty() &&
+         data.getName()[-1].toSegmentOffset() + data.getContent().value_size() < data.getFinalBlockId().toSegmentOffset())) {
+
+    // Request next segment offset
+    const Name next_offset_name = data.getName().getPrefix(data.getName().size() - 1)
+                                   .appendSegmentOffset(data.getName()[-1].toSegmentOffset() + data.getContent().value_size());
+
+    // Schedule a new event
+    _scheduler.scheduleEvent(time::milliseconds(0),
+                              bind(&NdnPlugin::sendInterest, this, next_offset_name));
   }
 }
 
 void NdnPlugin::onTimeout(const Interest& interest)
 {
-}
-
-void NdnPlugin::onChunkTimeout(const Interest& interest)
-{
+  std::cout << "Timeout" << interest << std::endl;
 }
 
 void NdnPlugin::processUri(const Uri uri)
 {
-  std::string uri_wo_schema = uri.toUriEncodedString().erase(0, strlen(SCHEMA) + 1);
-
-  Interest interest(uri_wo_schema);
-  interest.setInterestLifetime(time::milliseconds(5000));
-  interest.setMustBeFresh(true);
-
-  _face.expressInterest(interest,
-                         bind(&NdnPlugin::onData, this,  _1, _2),
-                         bind(&NdnPlugin::onTimeout, this, _1));
+  Name name(uri.toString());
+  sendInterest(name);
 
   // processEvents will block until the requested data received or timeout occurs
   _io_service.run();

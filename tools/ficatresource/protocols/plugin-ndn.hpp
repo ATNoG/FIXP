@@ -28,30 +28,32 @@
 
 using namespace ndn;
 
+static const uint32_t MAX_CHUNK_SIZE = MAX_NDN_PACKET_SIZE >> 1;
+
 class NdnPlugin : public Plugin
 {
 private:
-    boost::asio::io_service _io_service;
-    Face _face;
-    Scheduler _scheduler;
+  boost::asio::io_service _io_service;
+  Face _face;
+  Scheduler _scheduler;
 
 public:
   NdnPlugin()
     : Plugin()
-    , _face(_io_service) // Create face with io_service object
+    , _face(_io_service)
     , _scheduler(_io_service)
   { }
-
-  void onData(const Interest& interest, const Data& data);
-  void onTimeout(const Interest& interest);
 
   std::string getSchema() const { return SCHEMA; }
   void processUri(const Uri uri);
 
 private:
-  void requestChunk(const Name& interest_name);
-  void onChunk(const Interest& interest, const Data& data);
-  void onChunkTimeout(const Interest& interest);
+  void sendInterest(const Name& name);
+
+  void onData(const Interest& interest, const Data& data);
+  void onTimeout(const Interest& interest);
+  void onSegment(const Interest& interest, const Data& data);
+  void onSegmentOffset(const Interest& interest, const Data& data);
 };
 
 #endif /* NDN_PLUGIN__HPP_ */
